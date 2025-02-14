@@ -1,0 +1,29 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+
+
+		<PropertyGroup>
+			<TargetFramework>net9.0</TargetFramework>
+			<ImplicitUsings>enable</ImplicitUsings>
+			<Nullable>enable</Nullable>
+			<PackageId>Sixpoints.PageOptimizer</PackageId>
+			<Version>1.0.0</Version>
+			<Authors>Matthew Goldthorpe</Authors>
+			<Company>Sixpoints</Company>
+			<Description>A metadata, breadcrumb and resource manager for ASP.NET Core websites</Description>
+			<PackageLicenseExpression>MIT</PackageLicenseExpression>
+			<PackageReadmeFile>README.md</PackageReadmeFile>
+			<PackageTags>aspnetcore;metadata;seo;breadcrumbs;jsonld</PackageTags>
+			<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		</PropertyGroup>
+
+		<ItemGroup>
+			<PackageReference Include="Microsoft.AspNetCore.Mvc.TagHelpers" Version="2.3.0" />
+			<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.0" />
+		</ItemGroup>
+
+		<ItemGroup>
+			<None Include="README.md" Pack="true" PackagePath="\" />
+		</ItemGroup>
+
+</Project>
