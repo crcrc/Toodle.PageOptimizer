@@ -5,12 +5,19 @@ using System.Text.Json.Serialization;
 
 namespace Sixpoints.PageOptimizer
 {
+    /// <summary>
+    /// TagHelper for generating meta data tags for a web page.
+    /// </summary>
     [HtmlTargetElement("meta-data-tags")]
     public class MetaDataTagHelper : TagHelper
     {
         private readonly IMetaDataService _metaService;
         private readonly JsonSerializerOptions _jsonOptions;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MetaDataTagHelper"/> class.
+        /// </summary>
+        /// <param name="metaService">The metadata service to use for retrieving metadata.</param>
         public MetaDataTagHelper(IMetaDataService metaService)
         {
             _metaService = metaService;
@@ -22,6 +29,11 @@ namespace Sixpoints.PageOptimizer
             };
         }
 
+        /// <summary>
+        /// Processes the tag helper to generate meta data tags.
+        /// </summary>
+        /// <param name="context">The context in which the tag helper is operating.</param>
+        /// <param name="output">The output of the tag helper.</param>
         public override void Process(TagHelperContext context, TagHelperOutput output)
         {
             // Clear the output tag itself since we're just injecting meta tags
@@ -45,7 +57,6 @@ namespace Sixpoints.PageOptimizer
             if (metaTags.Any())
                 output.Content.AppendHtml(string.Join("\n", metaTags) + "\n");
 
-
             // Add breadcrumbs JSON-LD if we have any
             var breadcrumbs = _metaService.GetBreadCrumbs();
             if (breadcrumbs.Any())
@@ -55,6 +66,10 @@ namespace Sixpoints.PageOptimizer
             }
         }
 
+        /// <summary>
+        /// Adds the site name meta tag.
+        /// </summary>
+        /// <param name="metaTags">The list of meta tags to add to.</param>
         private void AddSiteName(List<string> metaTags)
         {
             var siteName = _metaService.GetSiteName();
@@ -64,6 +79,10 @@ namespace Sixpoints.PageOptimizer
             }
         }
 
+        /// <summary>
+        /// Adds the robots meta tag.
+        /// </summary>
+        /// <param name="metaTags">The list of meta tags to add to.</param>
         private void AddRobotsMetaTag(List<string> metaTags)
         {
             if (_metaService.IsNoIndex())
@@ -72,6 +91,10 @@ namespace Sixpoints.PageOptimizer
             }
         }
 
+        /// <summary>
+        /// Adds the canonical URL meta tag.
+        /// </summary>
+        /// <param name="metaTags">The list of meta tags to add to.</param>
         private void AddCanonicalUrl(List<string> metaTags)
         {
             var canonicalUrl = _metaService.GetCanonicalUrl();
@@ -82,6 +105,10 @@ namespace Sixpoints.PageOptimizer
             }
         }
 
+        /// <summary>
+        /// Adds the title meta tag.
+        /// </summary>
+        /// <param name="metaTags">The list of meta tags to add to.</param>
         private void AddTitleTag(List<string> metaTags)
         {
             var title = _metaService.GetMetaTitle();
@@ -95,6 +122,10 @@ namespace Sixpoints.PageOptimizer
             }
         }
 
+        /// <summary>
+        /// Adds the description meta tag.
+        /// </summary>
+        /// <param name="metaTags">The list of meta tags to add to.</param>
         private void AddDescriptionMetaTag(List<string> metaTags)
         {
             var description = _metaService.GetMetaDescription();
@@ -106,6 +137,10 @@ namespace Sixpoints.PageOptimizer
             }
         }
 
+        /// <summary>
+        /// Adds the locale meta tag.
+        /// </summary>
+        /// <param name="metaTags">The list of meta tags to add to.</param>
         private void AddLocale(List<string> metaTags)
         {
             var locale = _metaService.GetLocale();
@@ -115,6 +150,10 @@ namespace Sixpoints.PageOptimizer
             }
         }
 
+        /// <summary>
+        /// Adds the preload image tags.
+        /// </summary>
+        /// <param name="metaTags">The list of meta tags to add to.</param>
         private void AddPreloadImageTags(List<string> metaTags)
         {
             foreach (var url in _metaService.GetPreloadImageUrls())
@@ -123,6 +162,11 @@ namespace Sixpoints.PageOptimizer
             }
         }
 
+        /// <summary>
+        /// Generates the JSON-LD for breadcrumbs.
+        /// </summary>
+        /// <param name="breadcrumbs">The list of breadcrumb links.</param>
+        /// <returns>The JSON-LD string.</returns>
         private string GenerateBreadcrumbJsonLd(IReadOnlyList<BreadcrumbLink> breadcrumbs)
         {
             var itemListElement = new List<object>();
@@ -130,11 +174,15 @@ namespace Sixpoints.PageOptimizer
             for (int i = 0; i < breadcrumbs.Count; i++)
             {
                 var breadcrumb = breadcrumbs[i];
+
+                if (string.IsNullOrWhiteSpace(breadcrumb.Title))
+                    continue;
+
                 var item = new Dictionary<string, object>
-                {
-                    { "@type", "WebPage" },
-                    { "name", breadcrumb.Title }
-                };
+                    {
+                        { "@type", "WebPage" },
+                        { "name", breadcrumb.Title }
+                    };
 
                 var isLastItem = i == breadcrumbs.Count - 1;
                 if (!isLastItem && !string.IsNullOrEmpty(breadcrumb.Link))
@@ -143,19 +191,19 @@ namespace Sixpoints.PageOptimizer
                 }
 
                 itemListElement.Add(new Dictionary<string, object>
-                {
-                    { "@type", "ListItem" },
-                    { "position", i + 1 },
-                    { "item", item }
-                });
+                    {
+                        { "@type", "ListItem" },
+                        { "position", i + 1 },
+                        { "item", item }
+                    });
             }
 
             var jsonLdData = new Dictionary<string, object>
-            {
-                { "@context", "https://schema.org" },
-                { "@type", "BreadcrumbList" },
-                { "itemListElement", itemListElement }
-            };
+                {
+                    { "@context", "https://schema.org" },
+                    { "@type", "BreadcrumbList" },
+                    { "itemListElement", itemListElement }
+                };
 
             return JsonSerializer.Serialize(jsonLdData, _jsonOptions);
         }

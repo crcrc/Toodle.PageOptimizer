@@ -28,8 +28,9 @@ namespace Sixpoints.PageOptimizer
         /// <param name="siteName">The name of the website</param>
         /// <param name="baseUrl">The base URL of the website (e.g., https://example.com)</param>
         /// <param name="locale">The default locale for the website (e.g., en-US)</param>
+        /// <param name="homeText">The text that will appear for the first BreadcrumbLink to the site root (e.g. Home)</param>
         /// <exception cref="ArgumentException">Thrown when siteName or baseUrl is null or empty, or if baseUrl is invalid</exception>
-        public MetaDataService(string siteName, string baseUrl, string locale, string homeName = "Home")
+        public MetaDataService(string siteName, string baseUrl, string locale, string homeText = "Home")
         {
             if (string.IsNullOrEmpty(siteName))
                 throw new ArgumentException("Site name cannot be empty", nameof(siteName));
