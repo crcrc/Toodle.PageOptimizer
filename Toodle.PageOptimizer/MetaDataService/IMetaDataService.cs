@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Sixpoints.PageOptimizer
+namespace Toodle.PageOptimizer
 {
     /// <summary>
     /// Interface for managing metadata and breadcrumbs for web pages

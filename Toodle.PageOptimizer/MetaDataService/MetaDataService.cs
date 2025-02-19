@@ -1,11 +1,10 @@
 ﻿using System;
-using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Sixpoints.PageOptimizer
+namespace Toodle.PageOptimizer
 {
     /// <summary>
     /// Service for managing metadata and breadcrumbs for web pages
@@ -14,13 +13,13 @@ namespace Sixpoints.PageOptimizer
     {
         private readonly string _siteName;
         private readonly Uri _baseUrl;
-        private readonly HashSet<string> _preloadImageUrls = new();
+        private readonly HashSet<string> _preloadImageUrls = new HashSet<string>();
         private string _metaTitle = string.Empty;
         private Uri? _canonicalUrl;
         private string _metaDescription = string.Empty;
         private bool _noIndex = false;
         private string _locale;
-        private readonly List<BreadcrumbLink> _breadcrumbs = new();
+        private readonly List<BreadcrumbLink> _breadcrumbs = new List<BreadcrumbLink>();
 
         /// <summary>
         /// Initializes a new instance of the MetaDataService
@@ -160,7 +159,7 @@ namespace Sixpoints.PageOptimizer
         /// Gets the list of image URLs to be preloaded
         /// </summary>
         /// <returns>An immutable set of image URLs</returns>
-        public IReadOnlySet<string> GetPreloadImageUrls() => _preloadImageUrls.ToFrozenSet();
+        public IReadOnlySet<string> GetPreloadImageUrls() => new HashSet<string>(_preloadImageUrls, StringComparer.Ordinal);
 
         /// <summary>
         /// Gets whether the page should be indexed by search engines

@@ -1,11 +1,11 @@
-﻿# Sixpoints.PageOptimizer
+﻿# Toodle.PageOptimizer
 
 A metadata, breadcrumb and resource manager for ASP.NET Core websites.
 
 ## Installation
 
 ```bash
-dotnet add package Sixpoints.PageOptimizer
+dotnet add package Toodle.PageOptimizer
 ```
 
 ## Usage

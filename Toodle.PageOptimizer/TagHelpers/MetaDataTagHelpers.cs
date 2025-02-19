@@ -1,9 +1,11 @@
 ﻿using Microsoft.AspNetCore.Razor.TagHelpers;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Sixpoints.PageOptimizer
+namespace Toodle.PageOptimizer
 {
     /// <summary>
     /// TagHelper for generating meta data tags for a web page.
@@ -98,7 +100,7 @@ namespace Sixpoints.PageOptimizer
         private void AddCanonicalUrl(List<string> metaTags)
         {
             var canonicalUrl = _metaService.GetCanonicalUrl();
-            if (canonicalUrl is not null)
+            if (canonicalUrl != null)
             {
                 metaTags.Add($"<link rel=\"canonical\" href=\"{HtmlEncoder.Default.Encode(canonicalUrl.ToString().TrimEnd('/'))}\" />");
                 metaTags.Add($"<meta property=\"og:url\" content=\"{canonicalUrl.ToString().TrimEnd('/')}\" />");

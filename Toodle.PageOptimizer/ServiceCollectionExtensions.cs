@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Sixpoints.PageOptimizer
+namespace Toodle.PageOptimizer
 {
     /// <summary>
     /// Extension methods for adding metadata and breadcrumb services to the service collection.
