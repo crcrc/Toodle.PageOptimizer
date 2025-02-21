@@ -1,4 +1,7 @@
 ﻿# Toodle.PageOptimizer
+![NuGet Version](https://img.shields.io/nuget/v/Toodle.PageOptimizer)
+![NuGet Downloads](https://img.shields.io/nuget/dt/Toodle.PageOptimizer)
+
 
 A metadata, breadcrumb and resource manager for ASP.NET Core websites.
 
