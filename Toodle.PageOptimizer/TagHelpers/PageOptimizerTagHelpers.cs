@@ -10,19 +10,15 @@ namespace Toodle.PageOptimizer
     /// <summary>
     /// TagHelper for generating meta data tags for a web page.
     /// </summary>
-    [HtmlTargetElement("meta-data-tags")]
-    public class MetaDataTagHelper : TagHelper
+    [HtmlTargetElement("page-optimizer")]
+    public class PageOptimizerTagHelper : TagHelper
     {
-        private readonly IMetaDataService _metaService;
+        private readonly IPageOptimizerService _pageOptimizerService;
         private readonly JsonSerializerOptions _jsonOptions;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="MetaDataTagHelper"/> class.
-        /// </summary>
-        /// <param name="metaService">The metadata service to use for retrieving metadata.</param>
-        public MetaDataTagHelper(IMetaDataService metaService)
+        public PageOptimizerTagHelper(IPageOptimizerService pageOptimizerService)
         {
-            _metaService = metaService;
+            _pageOptimizerService = pageOptimizerService;
             _jsonOptions = new JsonSerializerOptions
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -31,11 +27,6 @@ namespace Toodle.PageOptimizer
             };
         }
 
-        /// <summary>
-        /// Processes the tag helper to generate meta data tags.
-        /// </summary>
-        /// <param name="context">The context in which the tag helper is operating.</param>
-        /// <param name="output">The output of the tag helper.</param>
         public override void Process(TagHelperContext context, TagHelperOutput output)
         {
             // Clear the output tag itself since we're just injecting meta tags
@@ -47,7 +38,6 @@ namespace Toodle.PageOptimizer
             AddRobotsMetaTag(metaTags);
             AddTitleTag(metaTags);
             AddDescriptionMetaTag(metaTags);
-            AddPreloadImageTags(metaTags);
             AddCanonicalUrl(metaTags);
             AddSiteName(metaTags);
             AddLocale(metaTags);
@@ -60,7 +50,7 @@ namespace Toodle.PageOptimizer
                 output.Content.AppendHtml(string.Join("\n", metaTags) + "\n");
 
             // Add breadcrumbs JSON-LD if we have any
-            var breadcrumbs = _metaService.GetBreadCrumbs();
+            var breadcrumbs = _pageOptimizerService.GetBreadCrumbs();
             if (breadcrumbs.Any())
             {
                 var jsonLd = GenerateBreadcrumbJsonLd(breadcrumbs);
@@ -68,69 +58,50 @@ namespace Toodle.PageOptimizer
             }
         }
 
-        /// <summary>
-        /// Adds the site name meta tag.
-        /// </summary>
-        /// <param name="metaTags">The list of meta tags to add to.</param>
         private void AddSiteName(List<string> metaTags)
         {
-            var siteName = _metaService.GetSiteName();
+            var siteName = _pageOptimizerService.GetSiteName();
             if (!string.IsNullOrWhiteSpace(siteName))
             {
                 metaTags.Add($"<meta property=\"og:site_name\" content=\"{HtmlEncoder.Default.Encode(siteName)}\" />");
             }
         }
 
-        /// <summary>
-        /// Adds the robots meta tag.
-        /// </summary>
-        /// <param name="metaTags">The list of meta tags to add to.</param>
         private void AddRobotsMetaTag(List<string> metaTags)
         {
-            if (_metaService.IsNoIndex())
+            if (_pageOptimizerService.IsNoIndex())
             {
                 metaTags.Add("<meta name=\"robots\" content=\"noindex\">");
             }
         }
 
-        /// <summary>
-        /// Adds the canonical URL meta tag.
-        /// </summary>
-        /// <param name="metaTags">The list of meta tags to add to.</param>
         private void AddCanonicalUrl(List<string> metaTags)
         {
-            var canonicalUrl = _metaService.GetCanonicalUrl();
+            var canonicalUrl = _pageOptimizerService.GetCanonicalUrl();
             if (canonicalUrl != null)
             {
-                metaTags.Add($"<link rel=\"canonical\" href=\"{HtmlEncoder.Default.Encode(canonicalUrl.ToString().TrimEnd('/'))}\" />");
+                metaTags.Add($"<link rel=\"canonical\" href=\"{HtmlEncoder.Default.Encode(canonicalUrl.ToString()).TrimEnd('/')}\" />");
                 metaTags.Add($"<meta property=\"og:url\" content=\"{canonicalUrl.ToString().TrimEnd('/')}\" />");
             }
         }
 
-        /// <summary>
-        /// Adds the title meta tag.
-        /// </summary>
-        /// <param name="metaTags">The list of meta tags to add to.</param>
         private void AddTitleTag(List<string> metaTags)
         {
-            var title = _metaService.GetMetaTitle();
+            var title = _pageOptimizerService.GetMetaTitle();
             if (!string.IsNullOrWhiteSpace(title))
             {
-                var siteName = _metaService.GetSiteName();
-                var formattedTitle = $"{HtmlEncoder.Default.Encode(title)} | {HtmlEncoder.Default.Encode(siteName)}";
-                metaTags.Add($"<title>{formattedTitle}</title>");
+                var siteName = _pageOptimizerService.GetSiteName();
+                var titleSeparator = _pageOptimizerService.GetTitleSeparator();
+                var formattedTitle = $"{HtmlEncoder.Default.Encode(title)} {HtmlEncoder.Default.Encode(titleSeparator)} {HtmlEncoder.Default.Encode(siteName)}";
+                metaTags.Add($"<title>{formattedTitle.Trim()}</title>");
                 metaTags.Add($"<meta property=\"og:title\" content=\"{formattedTitle}\" />");
                 metaTags.Add($"<meta name=\"twitter:title\" content=\"{HtmlEncoder.Default.Encode(title)}\" />");
             }
         }
 
-        /// <summary>
-        /// Adds the description meta tag.
-        /// </summary>
-        /// <param name="metaTags">The list of meta tags to add to.</param>
         private void AddDescriptionMetaTag(List<string> metaTags)
         {
-            var description = _metaService.GetMetaDescription();
+            var description = _pageOptimizerService.GetMetaDescription();
             if (!string.IsNullOrWhiteSpace(description))
             {
                 metaTags.Add($"<meta name=\"description\" content=\"{HtmlEncoder.Default.Encode(description)}\">");
@@ -139,38 +110,20 @@ namespace Toodle.PageOptimizer
             }
         }
 
-        /// <summary>
-        /// Adds the locale meta tag.
-        /// </summary>
-        /// <param name="metaTags">The list of meta tags to add to.</param>
         private void AddLocale(List<string> metaTags)
         {
-            var locale = _metaService.GetLocale();
+            var locale = _pageOptimizerService.GetLocale();
             if (!string.IsNullOrWhiteSpace(locale))
             {
                 metaTags.Add($"<meta property=\"og:locale\" content=\"{locale}\" />");
             }
         }
 
-        /// <summary>
-        /// Adds the preload image tags.
-        /// </summary>
-        /// <param name="metaTags">The list of meta tags to add to.</param>
-        private void AddPreloadImageTags(List<string> metaTags)
+        private string GenerateBreadcrumbJsonLd(IReadOnlyList<(string Title, string Url)> breadcrumbs)
         {
-            foreach (var url in _metaService.GetPreloadImageUrls())
-            {
-                metaTags.Add($"<link rel=\"preload\" as=\"image\" href=\"{HtmlEncoder.Default.Encode(url)}\">");
-            }
-        }
+            if (breadcrumbs.Count == 0)
+                return string.Empty;
 
-        /// <summary>
-        /// Generates the JSON-LD for breadcrumbs.
-        /// </summary>
-        /// <param name="breadcrumbs">The list of breadcrumb links.</param>
-        /// <returns>The JSON-LD string.</returns>
-        private string GenerateBreadcrumbJsonLd(IReadOnlyList<BreadcrumbLink> breadcrumbs)
-        {
             var itemListElement = new List<object>();
 
             for (int i = 0; i < breadcrumbs.Count; i++)
@@ -187,9 +140,9 @@ namespace Toodle.PageOptimizer
                     };
 
                 var isLastItem = i == breadcrumbs.Count - 1;
-                if (!isLastItem && !string.IsNullOrEmpty(breadcrumb.Link))
+                if (!isLastItem && !string.IsNullOrEmpty(breadcrumb.Url))
                 {
-                    item.Add("@id", breadcrumb.Link);
+                    item.Add("@id", breadcrumb.Url);
                 }
 
                 itemListElement.Add(new Dictionary<string, object>
