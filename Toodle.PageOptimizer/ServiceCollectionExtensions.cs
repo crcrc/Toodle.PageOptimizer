@@ -28,6 +28,7 @@ namespace Toodle.PageOptimizer
         {
             
             services.AddSingleton<PageOptimizerOptions>();
+            services.AddSingleton<PageOptimizerConfig>();
             services.AddScoped<IPageOptimizerService, PageOptimizerService>();
 
             var options = new PageOptimizerOptions();
@@ -121,9 +122,9 @@ namespace Toodle.PageOptimizer
         private string _titleSeparator = string.Empty;
         private string _baseUrl = string.Empty;
         private string _locale = "en-US";
-        private readonly List<(string Domain, bool CrossOrigin)> _preconnectDomains = new();
-        private readonly List<(string Url, AssetType AssetType, bool CrossOrigin)> _preloadResources = new();
-        private readonly List<(string Title, string Url)> _defaultBreadcrumbs = new();
+        private readonly List<(string Domain, bool CrossOrigin)> _preconnectDomains = new List<(string Domain, bool CrossOrigin)>();
+        private readonly List<(string Url, AssetType AssetType, bool CrossOrigin)> _preloadResources = new List<(string Url, AssetType AssetType, bool CrossOrigin)>();
+        private readonly List<(string Title, string Url)> _defaultBreadcrumbs = new List<(string Title, string Url)>();
 
         public bool IsLocked => _isLocked;
 

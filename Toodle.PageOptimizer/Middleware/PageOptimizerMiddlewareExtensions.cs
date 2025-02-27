@@ -19,8 +19,6 @@ namespace Toodle.PageOptimizer.Middleware
 
             var pageOptimizerApp = new PageOptimizerApp(app, config, options);
 
-            config.Lock();
-
             app.UseMiddleware<PageOptimizerMiddleware>();
 
             if (options.EnableHttpsCompression)
@@ -36,6 +34,13 @@ namespace Toodle.PageOptimizer.Middleware
 
             return pageOptimizerApp;
         }
+
+        //public static IPageOptimizerApp Start(this IPageOptimizerApp pageOptimizerApp)
+        //{
+        //    pageOptimizerApp.Start();
+
+        //    return pageOptimizerApp;
+        //}
     }
 
     public class PageOptimizerMiddleware
@@ -50,8 +55,6 @@ namespace Toodle.PageOptimizer.Middleware
         private static readonly Regex _fileExtensionRegex = new Regex(@"\.[a-zA-Z0-9]+$", RegexOptions.Compiled);
         public async Task InvokeAsync(HttpContext context, IPageOptimizerService pageOptimizerService)
         {
-            
-
             if (context.Request.Method == "GET"
                 &&!context.Request.Headers.ContainsKey("X-Requested-With")
                 && context.Request.Headers.Accept.ToString().Contains("text/html")

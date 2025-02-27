@@ -16,6 +16,7 @@ namespace Toodle.PageOptimizer
         IPageOptimizerApp AddDefaultPreconnect(string domain, bool crossOrigin = true);
         IPageOptimizerApp AddDefaultPreload(string url, AssetType assetType, bool crossOrigin = false);
         IPageOptimizerApp AddDefaultBreadcrumb(string title, string url = "");
+        IPageOptimizerApp LockConfig();
     }
 
     public class PageOptimizerApp : IPageOptimizerApp
@@ -36,9 +37,17 @@ namespace Toodle.PageOptimizer
             }
         }
 
+        public IPageOptimizerApp LockConfig()
+        {
+            _config.Lock();
+            return this;
+        }
+
 
         public IPageOptimizerApp WithBaseTitle(string siteName, string separator = "|")
         {
+            EnsureConfigNotLocked();
+
             _config.SiteName = siteName;
             _config.TitleSeparator = separator;
             return this;
