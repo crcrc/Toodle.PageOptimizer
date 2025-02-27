@@ -16,8 +16,17 @@ namespace Toodle.PageOptimizer
         IPageOptimizerApp AddDefaultPreconnect(string domain, bool crossOrigin = true);
         IPageOptimizerApp AddDefaultPreload(string url, AssetType assetType, bool crossOrigin = false);
         IPageOptimizerApp AddDefaultBreadcrumb(string title, string url = "");
-        IPageOptimizerApp LockConfig();
+        IPageOptimizerApp AddStaticFileCacheHeaders(Action<StaticFileCacheOptions> configure = null);
     }
+
+    public class StaticFileCacheOptions
+    {
+        public string[]? Paths { get; set; }
+        public string[]? FileExtensions { get; set; }
+        public TimeSpan? MaxAge { get; set; }
+        public bool? IsPublic { get; set; }
+    }
+
 
     public class PageOptimizerApp : IPageOptimizerApp
     {
@@ -37,9 +46,13 @@ namespace Toodle.PageOptimizer
             }
         }
 
-        public IPageOptimizerApp LockConfig()
+        public IPageOptimizerApp AddStaticFileCacheHeaders(Action<StaticFileCacheOptions> configure = null)
         {
-            _config.Lock();
+            var options = new StaticFileCacheOptions();
+            configure?.Invoke(options);
+
+           _config.AddStaticFileCacheOptions(options);
+
             return this;
         }
 
@@ -60,7 +73,7 @@ namespace Toodle.PageOptimizer
             if (string.IsNullOrWhiteSpace(baseUrl))
                 throw new ArgumentException("Base URL cannot be empty", nameof(baseUrl));
 
-            if (!IsValidUrl(baseUrl))
+            if (!IsValidAbsoluteUrl(baseUrl))
                 throw new ArgumentException("Invalid URL format", nameof(baseUrl));
 
             _config.BaseUrl = baseUrl.TrimEnd('/');
@@ -74,7 +87,7 @@ namespace Toodle.PageOptimizer
             if (string.IsNullOrWhiteSpace(domain))
                 throw new ArgumentException("Domain cannot be empty", nameof(domain));
 
-            if (!IsValidUrl(domain))
+            if (!IsValidAbsoluteUrl(domain))
                 throw new ArgumentException("Invalid domain format. Must be absolute URL.", nameof(domain));
 
 
@@ -89,7 +102,7 @@ namespace Toodle.PageOptimizer
             if (string.IsNullOrWhiteSpace(url))
                 throw new ArgumentException("URL cannot be empty", nameof(url));
 
-            if (!IsValidUrl(url))
+            if (!IsValidRelativeUrl(url))
                 throw new ArgumentException("Invalid URL format", nameof(url));
 
             if (!Enum.IsDefined(typeof(AssetType), assetType))
@@ -106,15 +119,25 @@ namespace Toodle.PageOptimizer
             if (string.IsNullOrWhiteSpace(title))
                 throw new ArgumentException("Breadcrumb title cannot be empty", nameof(title));
 
-            if (!string.IsNullOrWhiteSpace(url) && !IsValidUrl(url) && !url.StartsWith("/"))
+            if (!string.IsNullOrWhiteSpace(url) && !IsValidRelativeUrl(url) && !url.StartsWith("/"))
                 throw new ArgumentException("Invalid URL format. Must be absolute URL or start with '/'", nameof(url));
 
             _config.AddDefaultBreadcrumb(title, url);
             return this;
         }
 
-        private static bool IsValidUrl(string url)
+        private static bool IsValidAbsoluteUrl(string url)
         {
+            return Uri.TryCreate(url, UriKind.Absolute, out var uri) &&
+                   (uri.Scheme == "http" || uri.Scheme == "https");
+        }
+
+        // For URLs that can be either absolute or relative (like breadcrumbs)
+        private static bool IsValidRelativeUrl(string url)
+        {
+            if (string.IsNullOrWhiteSpace(url))
+                return true; // Empty URL is valid for some contexts
+
             return Uri.TryCreate(url, UriKind.Absolute, out _) ||
                    (url.StartsWith("/") && Uri.TryCreate("http://example.com" + url, UriKind.Absolute, out _));
         }

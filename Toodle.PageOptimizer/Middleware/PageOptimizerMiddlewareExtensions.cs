@@ -12,59 +12,39 @@ namespace Toodle.PageOptimizer.Middleware
 {
     public static class PageOptimizerMiddlewareExtensions
     {
-        public static IPageOptimizerApp UsePageOptimizer(this IApplicationBuilder app)
+        public static IPageOptimizerApp ConfigurePageOptimizer(this IApplicationBuilder app)
+        {
+            var config = app.ApplicationServices.GetService<PageOptimizerConfig>();
+            var options = app.ApplicationServices.GetService<PageOptimizerOptions>();
+            return new PageOptimizerApp(app, config, options);
+        }
+
+
+        public static IApplicationBuilder UsePageOptimizer(this IApplicationBuilder app)
         {
             var config = app.ApplicationServices.GetService<PageOptimizerConfig>();
             var options = app.ApplicationServices.GetService<PageOptimizerOptions>();
 
-            var pageOptimizerApp = new PageOptimizerApp(app, config, options);
+            // Ensure config is locked before middleware is used
+            config.Lock();
 
-            app.UseMiddleware<PageOptimizerMiddleware>();
+            app.UseMiddleware<AppendLinkHeaderMiddleware>();
 
             if (options.EnableHttpsCompression)
             {
                 app.UseResponseCompression();
             }
-
             if (options.UseRequestCulture != null)
             {
                 app.UseRequestLocalization();
             }
 
-
-            return pageOptimizerApp;
-        }
-
-        //public static IPageOptimizerApp Start(this IPageOptimizerApp pageOptimizerApp)
-        //{
-        //    pageOptimizerApp.Start();
-
-        //    return pageOptimizerApp;
-        //}
-    }
-
-    public class PageOptimizerMiddleware
-    {
-        private readonly RequestDelegate _next;
-
-        public PageOptimizerMiddleware(RequestDelegate next)
-        {
-            _next = next;
-        }
-
-        private static readonly Regex _fileExtensionRegex = new Regex(@"\.[a-zA-Z0-9]+$", RegexOptions.Compiled);
-        public async Task InvokeAsync(HttpContext context, IPageOptimizerService pageOptimizerService)
-        {
-            if (context.Request.Method == "GET"
-                &&!context.Request.Headers.ContainsKey("X-Requested-With")
-                && context.Request.Headers.Accept.ToString().Contains("text/html")
-                && !context.Response.HasStarted
-                && !_fileExtensionRegex.IsMatch(context.Request.Path.Value))
+            if (config.StaticFileCacheOptions != null)
             {
-                pageOptimizerService.AddLinkHeaders(context);
+                app.UseMiddleware<StaticFileCacheHeaderMiddleware>();
             }
 
-            await _next(context);
+            return app;
         }
     }
 }

@@ -26,7 +26,7 @@ namespace Toodle.PageOptimizer
             this IServiceCollection services,
             Action<PageOptimizerOptions> configureOptions = null)
         {
-            
+
             services.AddSingleton<PageOptimizerOptions>();
             services.AddSingleton<PageOptimizerConfig>();
             services.AddScoped<IPageOptimizerService, PageOptimizerService>();
@@ -70,24 +70,6 @@ namespace Toodle.PageOptimizer
                 });
             }
 
-            //app.UseStaticFiles(new StaticFileOptions
-            //{
-            //    OnPrepareResponse = ctx =>
-            //    {
-            //        var path = ctx.File.PhysicalPath;
-
-            //        // 7 days public cache for self hosted files
-            //        if (path.EndsWith(".js", StringComparison.OrdinalIgnoreCase) ||
-            //            path.EndsWith(".css", StringComparison.OrdinalIgnoreCase) ||
-            //            path.EndsWith(".ico", StringComparison.OrdinalIgnoreCase) ||
-            //            path.EndsWith("kameleoon_shearings.html", StringComparison.OrdinalIgnoreCase))
-            //        {
-            //            var maxAge = TimeSpan.FromDays(7);
-            //            ctx.Context.Response.Headers[HeaderNames.CacheControl] =
-            //                $"public, max-age={maxAge.TotalSeconds:0}";
-            //        }
-            //    }
-            //});
             return services;
         }
 
@@ -99,7 +81,7 @@ namespace Toodle.PageOptimizer
                 options.Providers.Add<BrotliCompressionProvider>();
                 options.Providers.Add<GzipCompressionProvider>();
                 options.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(new[] {
-                    "image/svg+xml" 
+                    "image/svg+xml"
                 });
             });
 
@@ -125,10 +107,11 @@ namespace Toodle.PageOptimizer
         private readonly List<(string Domain, bool CrossOrigin)> _preconnectDomains = new List<(string Domain, bool CrossOrigin)>();
         private readonly List<(string Url, AssetType AssetType, bool CrossOrigin)> _preloadResources = new List<(string Url, AssetType AssetType, bool CrossOrigin)>();
         private readonly List<(string Title, string Url)> _defaultBreadcrumbs = new List<(string Title, string Url)>();
+        private StaticFileCacheOptions? _staticFileCacheOptions;
 
         public bool IsLocked => _isLocked;
-
         public void Lock() => _isLocked = true;
+        public StaticFileCacheOptions? StaticFileCacheOptions => _staticFileCacheOptions;
 
         private void EnsureNotLocked()
         {
@@ -198,6 +181,19 @@ namespace Toodle.PageOptimizer
         {
             EnsureNotLocked();
             _defaultBreadcrumbs.Add((title, url));
+        }
+
+        public void AddStaticFileCacheOptions(StaticFileCacheOptions fileCacheOptions)
+        {
+            EnsureNotLocked();
+
+            _staticFileCacheOptions = new StaticFileCacheOptions
+            {
+                Paths = fileCacheOptions.Paths?.ToArray(),
+                FileExtensions = fileCacheOptions.FileExtensions?.ToArray(),
+                MaxAge = fileCacheOptions?.MaxAge,
+                IsPublic = fileCacheOptions?.IsPublic
+            };
         }
     }
 }
