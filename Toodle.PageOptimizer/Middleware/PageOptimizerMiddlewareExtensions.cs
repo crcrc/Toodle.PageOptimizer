@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Toodle.PageOptimizer.Sitemap.Middleware;
 
 namespace Toodle.PageOptimizer.Middleware
 {
@@ -42,6 +43,11 @@ namespace Toodle.PageOptimizer.Middleware
             if (config.StaticFileCacheOptions != null)
             {
                 app.UseMiddleware<StaticFileCacheHeaderMiddleware>();
+            }
+
+            if (options.ServeSitemap)
+            {
+                app.UseMiddleware<SitemapMiddleware>();
             }
 
             return app;

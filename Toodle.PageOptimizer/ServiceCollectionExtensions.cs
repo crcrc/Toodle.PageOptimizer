@@ -12,6 +12,8 @@ using Microsoft.AspNetCore.Localization;
 using System.Globalization;
 using Microsoft.Net.Http.Headers;
 using Microsoft.Extensions.Options;
+using Toodle.PageOptimizer.Sitemap.Services;
+using Toodle.PageOptimizer.Sitemap.Models;
 
 namespace Toodle.PageOptimizer
 {
@@ -19,6 +21,7 @@ namespace Toodle.PageOptimizer
     {
         public bool EnableHttpsCompression { get; set; } = false;
         public RequestCulture? UseRequestCulture { get; set; } = null;
+        public bool ServeSitemap { get; set; } = false;
     }
     public static class PageOptimizerExtensions
     {
@@ -35,6 +38,12 @@ namespace Toodle.PageOptimizer
             configureOptions?.Invoke(options);
             services.AddSingleton(options);
 
+            if (options.ServeSitemap)
+            {
+                services.AddMemoryCache();
+                services.AddSingleton<SitemapGenerator>();
+                services.AddSingleton<SitemapService>();
+            }
 
             if (options.EnableHttpsCompression)
             {
@@ -73,30 +82,59 @@ namespace Toodle.PageOptimizer
             return services;
         }
 
-        public static IServiceCollection UseHttpsResponseCompression(this IServiceCollection services)
+        /// <summary>
+        /// Registers a function that will be used as a sitemap source.
+        /// </summary>
+        /// <param name="services">The IServiceCollection.</param>
+        /// <param name="urlProviderFunc">The function that returns a collection of sitemap URLs.</param>
+        public static IServiceCollection AddSitemapSource(
+            this IServiceCollection services,
+            Func<IServiceProvider, Task<IEnumerable<SitemapUrl>>> urlProviderFunc)
         {
-            services.AddResponseCompression(options =>
-            {
-                options.EnableForHttps = true;
-                options.Providers.Add<BrotliCompressionProvider>();
-                options.Providers.Add<GzipCompressionProvider>();
-                options.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(new[] {
-                    "image/svg+xml"
-                });
-            });
-
-            services.Configure<BrotliCompressionProviderOptions>(options =>
-            {
-                options.Level = CompressionLevel.Optimal;
-            });
-
-            services.Configure<GzipCompressionProviderOptions>(options =>
-            {
-                options.Level = CompressionLevel.Optimal;
-            });
+            // This line was causing the error because the class below was missing.
+            services.AddScoped<ISitemapSource>(sp => new FuncSitemapSource(urlProviderFunc, sp));
             return services;
         }
+
+        /// <summary>
+        /// Registers a class that implements ISitemapSource.
+        /// </summary>
+        public static IServiceCollection AddSitemapSource<T>(this IServiceCollection services)
+            where T : class, ISitemapSource
+        {
+            return services.AddScoped<ISitemapSource, T>();
+        }
+
+
+        /// <summary>
+        /// An internal adapter class that wraps a user-provided function into an ISitemapSource.
+        /// This allows for simple, inline registration of sitemap sources.
+        /// </summary>
+        private class FuncSitemapSource : ISitemapSource
+        {
+            private readonly Func<IServiceProvider, Task<IEnumerable<SitemapUrl>>> _urlProviderFunc;
+            private readonly IServiceProvider _serviceProvider;
+
+            public FuncSitemapSource(
+                Func<IServiceProvider, Task<IEnumerable<SitemapUrl>>> urlProviderFunc,
+                IServiceProvider serviceProvider)
+            {
+                _urlProviderFunc = urlProviderFunc ?? throw new ArgumentNullException(nameof(urlProviderFunc));
+                _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+            }
+
+            /// <summary>
+            /// Executes the user's function to get the sitemap URLs.
+            /// </summary>
+            public Task<IEnumerable<SitemapUrl>> GetUrlsAsync()
+            {
+                // When this is called by the SitemapService, it will invoke the
+                // lambda expression you defined in Program.cs.
+                return _urlProviderFunc(_serviceProvider);
+            }
+        }
     }
+
     public class PageOptimizerConfig
     {
         private bool _isLocked = false;
@@ -108,10 +146,12 @@ namespace Toodle.PageOptimizer
         private readonly List<(string Url, AssetType AssetType, bool CrossOrigin)> _preloadResources = new List<(string Url, AssetType AssetType, bool CrossOrigin)>();
         private readonly List<(string Title, string Url)> _defaultBreadcrumbs = new List<(string Title, string Url)>();
         private StaticFileCacheOptions? _staticFileCacheOptions;
+        private SitemapOptions? _sitemapOptions;
 
         public bool IsLocked => _isLocked;
         public void Lock() => _isLocked = true;
         public StaticFileCacheOptions? StaticFileCacheOptions => _staticFileCacheOptions;
+        public SitemapOptions? SitemapOptions => _sitemapOptions;
 
         private void EnsureNotLocked()
         {
@@ -193,6 +233,17 @@ namespace Toodle.PageOptimizer
                 FileExtensions = fileCacheOptions.FileExtensions?.ToArray(),
                 MaxAge = fileCacheOptions?.MaxAge,
                 IsPublic = fileCacheOptions?.IsPublic
+            };
+        }
+
+        public void AddSitemapOptions(SitemapOptions sitemapOptions)
+        {
+            EnsureNotLocked();
+
+            _sitemapOptions = new SitemapOptions
+            {
+                CacheDuration = sitemapOptions.CacheDuration,
+                Path = sitemapOptions.Path
             };
         }
     }
