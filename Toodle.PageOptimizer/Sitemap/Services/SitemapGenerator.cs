@@ -8,6 +8,11 @@ using Toodle.PageOptimizer.Sitemap.Models;
 
 namespace Toodle.PageOptimizer.Sitemap.Services
 {
+    public class Utf8StringWriter : StringWriter
+    {
+        public override Encoding Encoding => Encoding.UTF8;
+    }
+
     /// <summary>
     /// Generates a sitemap XML string from a collection of SitemapUrl objects.
     /// This class is stateless and can be registered as a scoped or transient service.
@@ -31,7 +36,7 @@ namespace Toodle.PageOptimizer.Sitemap.Services
 
             // Using a StringWriter as the destination for the XML stream.
             // It writes to an in-memory StringBuilder.
-            using (var stringWriter = new StringWriter())
+            using (var stringWriter = new Utf8StringWriter())
             {
                 using (var xmlWriter = XmlWriter.Create(stringWriter, settings))
                 {

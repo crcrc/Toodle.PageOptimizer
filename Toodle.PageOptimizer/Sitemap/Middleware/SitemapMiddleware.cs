@@ -17,9 +17,11 @@ namespace Toodle.PageOptimizer.Sitemap.Middleware
             _next = next;
         }
 
-        public async Task InvokeAsync(HttpContext context, SitemapService sitemapService)
+        public async Task InvokeAsync(HttpContext context, SitemapService sitemapService, PageOptimizerConfig pageOptimizerConfig)
         {
-            if (context.Request.Path.Equals("/sitemap.xml", StringComparison.OrdinalIgnoreCase))
+            var sitemapPath = pageOptimizerConfig.SitemapOptions?.Path;
+
+            if (!string.IsNullOrWhiteSpace(sitemapPath) && context.Request.Path.Equals(sitemapPath, StringComparison.OrdinalIgnoreCase))
             {
                 string? sitemapContent = await sitemapService.GetSitemapXmlAsync();
 

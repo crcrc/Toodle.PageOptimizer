@@ -5,7 +5,7 @@
 	<ImplicitUsings>disable</ImplicitUsings>  
 	<Nullable>enable</Nullable>  
 	<PackageId>Toodle.PageOptimizer</PackageId>  
-	<Version>1.1.0</Version>  
+	<Version>1.2.1</Version>  
 	<Authors>Matthew Goldthorpe</Authors>  
 	<Company>Toodle</Company>  
 	<Description>A website metadata, breadcrumb and resource manager for ASP.NET Core websites, enhancing SEO and site navigation. Uses tag helpers to automatically insert meta tags and JSON-LD to pages</Description>  
@@ -18,7 +18,7 @@
 	<PackageProjectUrl>https://www.toodle.uk/opensource</PackageProjectUrl>  
 	<RepositoryUrl>https://github.com/crcrc/Toodle.PageOptimizer</RepositoryUrl>  
 	<PackageReleaseNotes>See https://github.com/crcrc/Toodle.PageOptimizer/blob/main/CHANGELOG.md for details</PackageReleaseNotes>  
-</PropertyGroup>
+</PropertyGroup>  
 
 	<ItemGroup>
 		<FrameworkReference Include="Microsoft.AspNetCore.App" />

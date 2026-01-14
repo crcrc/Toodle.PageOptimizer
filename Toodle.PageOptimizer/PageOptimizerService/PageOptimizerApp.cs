@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Toodle.PageOptimizer.Models;
+using Toodle.PageOptimizer.Sitemap.Middleware;
 
 namespace Toodle.PageOptimizer
 {
@@ -17,6 +18,7 @@ namespace Toodle.PageOptimizer
         IPageOptimizerApp AddDefaultPreload(string url, AssetType assetType, bool crossOrigin = false);
         IPageOptimizerApp AddDefaultBreadcrumb(string title, string url = "");
         IPageOptimizerApp AddStaticFileCacheHeaders(Action<StaticFileCacheOptions> configure = null);
+        IPageOptimizerApp ServeSitemap(Action<SitemapOptions> configure = null);
     }
 
     public class StaticFileCacheOptions
@@ -25,6 +27,12 @@ namespace Toodle.PageOptimizer
         public string[]? FileExtensions { get; set; }
         public TimeSpan? MaxAge { get; set; }
         public bool? IsPublic { get; set; }
+    }
+
+    public class SitemapOptions
+    {
+        public TimeSpan CacheDuration { get; set; } = TimeSpan.FromHours(4);
+        public string Path { get; set; } = "/sitemap.xml";
     }
 
 
@@ -125,6 +133,22 @@ namespace Toodle.PageOptimizer
             _config.AddDefaultBreadcrumb(title, url);
             return this;
         }
+
+        public IPageOptimizerApp ServeSitemap(Action<SitemapOptions> configure = null)
+        {
+            EnsureConfigNotLocked();
+
+            if (string.IsNullOrWhiteSpace(_config.BaseUrl))
+                throw new ArgumentException("WithBaseUrl() must be called before ServeSitemap() to set the Base Url", nameof(_config.BaseUrl));
+
+            var options = new SitemapOptions();
+            configure?.Invoke(options);
+
+            _config.AddSitemapOptions(options);
+
+            return this;
+        }
+
 
         private static bool IsValidAbsoluteUrl(string url)
         {

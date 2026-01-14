@@ -90,10 +90,10 @@ namespace Toodle.PageOptimizer.Sitemap.Services
             string sitemapXml = _sitemapGenerator.GenerateSitemap(allUrls.DistinctBy(u => u.Location));
 
             // Cache the newly generated XML with the configured expiration.
-            _memoryCache.Set(SitemapCacheKey, sitemapXml, _options.CacheExpiration);
+            _memoryCache.Set(SitemapCacheKey, sitemapXml, _options.CacheDuration);
 
             _logger.LogInformation("Sitemap refresh completed. Cached {UrlCount} unique URLs for {Expiration}.",
-                allUrls.DistinctBy(u => u.Location).Count(), _options.CacheExpiration);
+                allUrls.DistinctBy(u => u.Location).Count(), _options.CacheDuration);
 
             return sitemapXml;
         }
