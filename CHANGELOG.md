@@ -4,6 +4,12 @@
 
 <!-- next-release -->
 
+## 1.2.1
+- Fixed Sitemap.xml encoding
+-
+## 1.2.0
+- Added Sitemap generation middleware
+
 ## 1.1.0
 
 - Refactored to use a fluid configuration API
