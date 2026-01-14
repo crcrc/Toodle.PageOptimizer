@@ -6,7 +6,8 @@
 
 ## 1.2.1
 - Fixed Sitemap.xml encoding
--
+- Added dotnet 10 build
+
 ## 1.2.0
 - Added Sitemap generation middleware
 
