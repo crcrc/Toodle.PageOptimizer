@@ -25,6 +25,11 @@ namespace Toodle.PageOptimizer
     }
     public static class PageOptimizerExtensions
     {
+        /// <summary>
+        /// Registers PageOptimizer services. Call ConfigurePageOptimizer() and UsePageOptimizer() after app.Build() to complete setup.
+        /// </summary>
+        /// <param name="services">The IServiceCollection.</param>
+        /// <param name="configureOptions">Optional action to enable compression, localization, and sitemap serving.</param>
         public static IServiceCollection AddPageOptimizer(
             this IServiceCollection services,
             Action<PageOptimizerOptions> configureOptions = null)
@@ -147,11 +152,13 @@ namespace Toodle.PageOptimizer
         private readonly List<(string Title, string Url)> _defaultBreadcrumbs = new List<(string Title, string Url)>();
         private StaticFileCacheOptions? _staticFileCacheOptions;
         private SitemapOptions? _sitemapOptions;
+        private string? _defaultImage;
 
         public bool IsLocked => _isLocked;
         public void Lock() => _isLocked = true;
         public StaticFileCacheOptions? StaticFileCacheOptions => _staticFileCacheOptions;
         public SitemapOptions? SitemapOptions => _sitemapOptions;
+        public string? DefaultImage => _defaultImage;
 
         private void EnsureNotLocked()
         {
@@ -234,6 +241,12 @@ namespace Toodle.PageOptimizer
                 MaxAge = fileCacheOptions?.MaxAge,
                 IsPublic = fileCacheOptions?.IsPublic
             };
+        }
+
+        public void SetDefaultImage(string imageUrl)
+        {
+            EnsureNotLocked();
+            _defaultImage = imageUrl;
         }
 
         public void AddSitemapOptions(SitemapOptions sitemapOptions)

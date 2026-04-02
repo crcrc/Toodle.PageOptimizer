@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Toodle.PageOptimizer.Models;
 
 namespace Toodle.PageOptimizer
 {
@@ -42,8 +43,24 @@ namespace Toodle.PageOptimizer
             AddSiteName(metaTags);
             AddLocale(metaTags);
 
-            metaTags.Add($"<meta property=\"og:type\" content=\"website\" />");
-            metaTags.Add($"<meta name=\"twitter:card\" content=\"summary\" />");
+            AddImageMetaTags(metaTags);
+
+            var ogType = _pageOptimizerService.GetOgType();
+            if (!string.IsNullOrWhiteSpace(ogType))
+                metaTags.Add($"<meta property=\"og:type\" content=\"{HtmlEncoder.Default.Encode(ogType)}\" />");
+
+            var twitterCard = _pageOptimizerService.GetTwitterCard();
+            if (twitterCard.HasValue)
+            {
+                var cardValue = twitterCard.Value switch
+                {
+                    TwitterCard.SummaryLargeImage => "summary_large_image",
+                    TwitterCard.App => "app",
+                    TwitterCard.Player => "player",
+                    _ => "summary"
+                };
+                metaTags.Add($"<meta name=\"twitter:card\" content=\"{cardValue}\" />");
+            }
 
             // Add the meta tags
             if (metaTags.Any())
@@ -56,6 +73,16 @@ namespace Toodle.PageOptimizer
                 var jsonLd = GenerateBreadcrumbJsonLd(breadcrumbs);
                 output.Content.AppendHtml($"\n<script type=\"application/ld+json\">\n{jsonLd}\n</script>");
             }
+        }
+
+        private void AddImageMetaTags(List<string> metaTags)
+        {
+            var image = _pageOptimizerService.GetMetaImage();
+            if (string.IsNullOrWhiteSpace(image))
+                return;
+
+            metaTags.Add($"<meta property=\"og:image\" content=\"{HtmlEncoder.Default.Encode(image)}\" />");
+            metaTags.Add($"<meta name=\"twitter:image\" content=\"{HtmlEncoder.Default.Encode(image)}\" />");
         }
 
         private void AddSiteName(List<string> metaTags)
@@ -124,6 +151,7 @@ namespace Toodle.PageOptimizer
             if (breadcrumbs.Count == 0)
                 return string.Empty;
 
+            var baseUrl = _pageOptimizerService.GetBaseUrl()?.ToString();
             var itemListElement = new List<object>();
 
             for (int i = 0; i < breadcrumbs.Count; i++)
@@ -142,7 +170,7 @@ namespace Toodle.PageOptimizer
                 var isLastItem = i == breadcrumbs.Count - 1;
                 if (!isLastItem && !string.IsNullOrEmpty(breadcrumb.Url))
                 {
-                    item.Add("@id", breadcrumb.Url);
+                    item.Add("@id", PageOptimizerApp.ResolveImageUrl(breadcrumb.Url, baseUrl));
                 }
 
                 itemListElement.Add(new Dictionary<string, object>

@@ -8,26 +8,125 @@ namespace Toodle.PageOptimizer
 {
     public interface IPageOptimizerService
     {
+        /// <summary>Returns the meta title set for the current request.</summary>
         public string GetMetaTitle();
+
+        /// <summary>Returns the meta description set for the current request.</summary>
         public string GetMetaDescription();
+
+        /// <summary>Returns true if the current page has been marked as noindex.</summary>
         public bool IsNoIndex();
+
+        /// <summary>Returns the global site name configured at startup.</summary>
         public string GetSiteName();
+
+        /// <summary>Returns the title separator configured at startup (e.g. "|").</summary>
         public string GetTitleSeparator();
+
+        /// <summary>Returns the locale for the current request (e.g. "en-US").</summary>
         public string GetLocale();
+
+        /// <summary>Returns the canonical URL set for the current request, or null if not set.</summary>
         public Uri? GetCanonicalUrl();
+
+        /// <summary>Returns the base URL configured at startup.</summary>
         public Uri GetBaseUrl();
+
+        /// <summary>Returns the breadcrumb list for the current request, including any global defaults.</summary>
         public IReadOnlyList<(string Title, string Url)> GetBreadCrumbs();
 
+        /// <summary>Returns the og:type value set for the current request, or null if not set.</summary>
+        public string? GetOgType();
 
+        /// <summary>Returns the Twitter Card type set for the current request, or null if not set.</summary>
+        public TwitterCard? GetTwitterCard();
+
+        /// <summary>Returns the absolute image URL set for the current request, or null if not set.</summary>
+        public string? GetMetaImage();
+
+        /// <summary>
+        /// Adds a rel=preconnect hint for the given domain to the HTTP Link header.
+        /// </summary>
+        /// <param name="domain">The absolute URL of the domain to preconnect to.</param>
+        /// <param name="crossOrigin">Whether to include the crossorigin attribute. Defaults to true.</param>
         public IPageOptimizerService AddPreconnect(string domain, bool crossOrigin = true);
+
+        /// <summary>
+        /// Adds a rel=preload hint for the given resource to the HTTP Link header.
+        /// </summary>
+        /// <param name="url">The URL of the resource to preload.</param>
+        /// <param name="AssetType">The type of asset (e.g. Script, Style, Font).</param>
+        /// <param name="crossOrigin">Whether to include the crossorigin attribute. Defaults to false.</param>
         public IPageOptimizerService AddPreload(string url, AssetType AssetType, bool crossOrigin = false);
+
+        /// <summary>
+        /// Sets the page title. Rendered as "{title} {separator} {siteName}" in the tag helper.
+        /// </summary>
+        /// <param name="title">The page-specific title.</param>
         public IPageOptimizerService SetMetaTitle(string title);
+
+        /// <summary>
+        /// Overrides the locale for the current request, used for the og:locale meta tag.
+        /// </summary>
+        /// <param name="locale">A locale string such as "en-GB" or "fr-FR".</param>
         public IPageOptimizerService SetLocale(string locale);
+
+        /// <summary>
+        /// Sets the meta description for the current page. Used for the description, og:description, and twitter:description tags.
+        /// </summary>
+        /// <param name="description">The page description.</param>
         public IPageOptimizerService SetMetaDescription(string description);
+
+        /// <summary>
+        /// Marks the current page as noindex, rendering a robots meta tag to prevent search engine indexing.
+        /// </summary>
         public IPageOptimizerService SetNoIndex();
-        public IPageOptimizerService SetCanonicalUrl(string relativePath);
+
+        /// <summary>
+        /// Sets the canonical URL for the current page. Accepts a relative path (resolved against the base URL) or an absolute URL.
+        /// </summary>
+        /// <param name="url">A relative path (e.g. "/products/slug") or absolute URL.</param>
+        public IPageOptimizerService SetCanonicalUrl(string url);
+
+        /// <summary>
+        /// Sets the og:type meta tag for the current page (e.g. "website", "article", "product").
+        /// Not rendered unless explicitly set.
+        /// </summary>
+        /// <param name="ogType">A valid Open Graph type string.</param>
+        public IPageOptimizerService SetOgType(string ogType);
+
+        /// <summary>
+        /// Sets the twitter:card meta tag for the current page.
+        /// Not rendered unless explicitly set.
+        /// </summary>
+        /// <param name="twitterCard">The Twitter Card type to use.</param>
+        public IPageOptimizerService SetTwitterCard(TwitterCard twitterCard);
+
+        /// <summary>
+        /// Sets the share image for the current page, overriding the global default.
+        /// Accepts a relative path (resolved against the base URL) or an absolute URL.
+        /// Used for both og:image and twitter:image tags.
+        /// </summary>
+        /// <param name="url">A relative path or absolute URL to the image.</param>
+        public IPageOptimizerService SetMetaImage(string url);
+
+        /// <summary>
+        /// Appends a breadcrumb to the end of the breadcrumb list for the current request.
+        /// </summary>
+        /// <param name="title">The display label for the breadcrumb.</param>
+        /// <param name="url">The URL for the breadcrumb. Leave empty for the current (last) page.</param>
         public IPageOptimizerService AddBreadCrumb(string title, string url);
+
+        /// <summary>
+        /// Removes all breadcrumbs, including any global defaults, for the current request.
+        /// </summary>
         public IPageOptimizerService ClearBreadcrumbs();
+
+        /// <summary>
+        /// Writes all configured preconnect and preload hints to the HTTP Link response header.
+        /// Called automatically by the middleware.
+        /// </summary>
+        /// <param name="context">The current HTTP context.</param>
         public void AddLinkHeaders(HttpContext context);
     }
 
@@ -45,6 +144,9 @@ namespace Toodle.PageOptimizer
         private string _metaDescription = string.Empty;
         private bool _noIndex = false;
         private string _locale;
+        private string? _ogType;
+        private TwitterCard? _twitterCard;
+        private string? _metaImage;
         private readonly List<(string Title, string Url)> _breadcrumbs = new List<(string Title, string Url)>();
 
         public string GetMetaTitle() => _metaTitle;
@@ -55,6 +157,9 @@ namespace Toodle.PageOptimizer
         public string GetLocale() => _locale;
         public Uri? GetCanonicalUrl() => _canonicalUrl;
         public Uri GetBaseUrl() => _baseUrl;
+        public string? GetOgType() => _ogType;
+        public TwitterCard? GetTwitterCard() => _twitterCard;
+        public string? GetMetaImage() => _metaImage;
         public IReadOnlyList<(string Title, string Url)> GetBreadCrumbs() => _breadcrumbs.AsReadOnly();
 
         public PageOptimizerService(PageOptimizerConfig config)
@@ -78,6 +183,9 @@ namespace Toodle.PageOptimizer
 
             if (_config.DefaultBreadcrumbs != null)
                 _breadcrumbs.AddRange(_config.DefaultBreadcrumbs);
+
+            if (_config.DefaultImage != null)
+                _metaImage = _config.DefaultImage;
         }
 
         public IPageOptimizerService AddPreconnect(string domain, bool crossOrigin = true)
@@ -144,22 +252,33 @@ namespace Toodle.PageOptimizer
             return this;
         }
 
-        public IPageOptimizerService SetCanonicalUrl(string relativePath)
+        public IPageOptimizerService SetCanonicalUrl(string url)
         {
-            if (relativePath == null)
-                throw new ArgumentNullException(nameof(relativePath));
+            if (url == null)
+                throw new ArgumentNullException(nameof(url));
 
-            if (_baseUrl == null)
-                throw new InvalidOperationException("Base URL must be set before setting canonical URL");
+            _canonicalUrl = new Uri(PageOptimizerApp.ResolveImageUrl(url, _config.BaseUrl));
+            return this;
+        }
 
-            try
-            {
-                _canonicalUrl = new Uri(_baseUrl, relativePath);
-            }
-            catch (UriFormatException ex)
-            {
-                throw new ArgumentException($"Invalid relative path format: {relativePath}", nameof(relativePath), ex);
-            }
+        public IPageOptimizerService SetMetaImage(string url)
+        {
+            if (string.IsNullOrWhiteSpace(url))
+                throw new ArgumentException("Image URL cannot be empty", nameof(url));
+
+            _metaImage = PageOptimizerApp.ResolveImageUrl(url, _config.BaseUrl);
+            return this;
+        }
+
+        public IPageOptimizerService SetOgType(string ogType)
+        {
+            _ogType = ogType;
+            return this;
+        }
+
+        public IPageOptimizerService SetTwitterCard(TwitterCard twitterCard)
+        {
+            _twitterCard = twitterCard;
             return this;
         }
 

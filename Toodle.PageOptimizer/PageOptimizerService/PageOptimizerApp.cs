@@ -12,12 +12,60 @@ namespace Toodle.PageOptimizer
 {
     public interface IPageOptimizerApp
     {
+        /// <summary>
+        /// Sets the global site name and title separator used when rendering page titles.
+        /// The title is rendered as "{page title} {separator} {site name}".
+        /// </summary>
+        /// <param name="siteName">The name of the site (e.g. "My Site").</param>
+        /// <param name="separator">The separator between page title and site name. Defaults to "|".</param>
         IPageOptimizerApp WithBaseTitle(string siteName, string separator = "|");
+
+        /// <summary>
+        /// Sets the base URL of the site. Required for resolving relative canonical URLs, image URLs, and breadcrumb links.
+        /// </summary>
+        /// <param name="baseUrl">The absolute base URL (e.g. "https://www.example.com").</param>
         IPageOptimizerApp WithBaseUrl(string baseUrl);
+
+        /// <summary>
+        /// Sets the global default share image applied to every page unless overridden by SetMetaImage().
+        /// Accepts a relative path (resolved against the base URL) or an absolute URL.
+        /// </summary>
+        /// <param name="url">A relative path or absolute URL to the image.</param>
+        IPageOptimizerApp WithDefaultImage(string url);
+
+        /// <summary>
+        /// Adds a rel=preconnect hint for the given domain to every HTML response's HTTP Link header.
+        /// </summary>
+        /// <param name="domain">The absolute URL of the domain to preconnect to.</param>
+        /// <param name="crossOrigin">Whether to include the crossorigin attribute. Defaults to true.</param>
         IPageOptimizerApp AddDefaultPreconnect(string domain, bool crossOrigin = true);
+
+        /// <summary>
+        /// Adds a rel=preload hint for the given resource to every HTML response's HTTP Link header.
+        /// </summary>
+        /// <param name="url">The relative or absolute URL of the resource to preload.</param>
+        /// <param name="assetType">The type of asset (e.g. Script, Style, Font).</param>
+        /// <param name="crossOrigin">Whether to include the crossorigin attribute. Defaults to false.</param>
         IPageOptimizerApp AddDefaultPreload(string url, AssetType assetType, bool crossOrigin = false);
+
+        /// <summary>
+        /// Adds a breadcrumb to the global default list prepended to every page's breadcrumb trail.
+        /// </summary>
+        /// <param name="title">The display label for the breadcrumb.</param>
+        /// <param name="url">The URL for the breadcrumb. Leave empty for a label-only entry.</param>
         IPageOptimizerApp AddDefaultBreadcrumb(string title, string url = "");
+
+        /// <summary>
+        /// Enables Cache-Control header injection for static file responses matching the configured extensions and paths.
+        /// </summary>
+        /// <param name="configure">Optional action to configure paths, extensions, max-age, and public/private.</param>
         IPageOptimizerApp AddStaticFileCacheHeaders(Action<StaticFileCacheOptions> configure = null);
+
+        /// <summary>
+        /// Enables sitemap.xml generation and serving. Requires WithBaseUrl() to have been called first.
+        /// Sitemap sources must be registered via AddSitemapSource() in AddPageOptimizer().
+        /// </summary>
+        /// <param name="configure">Optional action to configure the sitemap path and cache duration.</param>
         IPageOptimizerApp ServeSitemap(Action<SitemapOptions> configure = null);
     }
 
@@ -134,6 +182,17 @@ namespace Toodle.PageOptimizer
             return this;
         }
 
+        public IPageOptimizerApp WithDefaultImage(string url)
+        {
+            EnsureConfigNotLocked();
+
+            if (string.IsNullOrWhiteSpace(url))
+                throw new ArgumentException("Image URL cannot be empty", nameof(url));
+
+            _config.SetDefaultImage(ResolveImageUrl(url, _config.BaseUrl));
+            return this;
+        }
+
         public IPageOptimizerApp ServeSitemap(Action<SitemapOptions> configure = null)
         {
             EnsureConfigNotLocked();
@@ -149,6 +208,18 @@ namespace Toodle.PageOptimizer
             return this;
         }
 
+
+        internal static string ResolveImageUrl(string url, string baseUrl)
+        {
+            if (Uri.TryCreate(url, UriKind.Absolute, out var absoluteUri) &&
+                (absoluteUri.Scheme == "http" || absoluteUri.Scheme == "https"))
+                return url;
+
+            if (string.IsNullOrWhiteSpace(baseUrl))
+                throw new InvalidOperationException("WithBaseUrl() must be called before setting a relative image URL.");
+
+            return new Uri(new Uri(baseUrl), url).ToString();
+        }
 
         private static bool IsValidAbsoluteUrl(string url)
         {

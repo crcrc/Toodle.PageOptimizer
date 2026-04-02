@@ -13,6 +13,11 @@ namespace Toodle.PageOptimizer.Middleware
 {
     public static class PageOptimizerMiddlewareExtensions
     {
+        /// <summary>
+        /// Returns a fluent builder for configuring global site defaults such as base URL, title, default image, preloads, and sitemap.
+        /// Must be called after app.Build() and before UsePageOptimizer().
+        /// </summary>
+        /// <param name="app">The IApplicationBuilder.</param>
         public static IPageOptimizerApp ConfigurePageOptimizer(this IApplicationBuilder app)
         {
             var config = app.ApplicationServices.GetService<PageOptimizerConfig>();
@@ -20,7 +25,11 @@ namespace Toodle.PageOptimizer.Middleware
             return new PageOptimizerApp(app, config, options);
         }
 
-
+        /// <summary>
+        /// Registers the PageOptimizer middleware pipeline. Locks configuration to prevent further changes.
+        /// Must be called after ConfigurePageOptimizer().
+        /// </summary>
+        /// <param name="app">The IApplicationBuilder.</param>
         public static IApplicationBuilder UsePageOptimizer(this IApplicationBuilder app)
         {
             var config = app.ApplicationServices.GetService<PageOptimizerConfig>();

@@ -6,15 +6,24 @@ using System.Threading.Tasks;
 
 namespace Toodle.PageOptimizer.Models
 {
+    /// <summary>Specifies the type of resource for a rel=preload Link header hint.</summary>
     public enum AssetType
     {
-        Style,  
+        /// <summary>A CSS stylesheet.</summary>
+        Style,
+        /// <summary>A JavaScript file.</summary>
         Script,
+        /// <summary>A web font file.</summary>
         Font,
+        /// <summary>An image file.</summary>
         Image,
+        /// <summary>An audio file.</summary>
         Audio,
+        /// <summary>A video file.</summary>
         Video,
+        /// <summary>An HTML document.</summary>
         Document,
+        /// <summary>A resource to be fetched via the Fetch API.</summary>
         Fetch
     }
 }

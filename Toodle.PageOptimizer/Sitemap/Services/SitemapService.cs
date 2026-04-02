@@ -1,7 +1,6 @@
 ﻿using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,7 +17,7 @@ namespace Toodle.PageOptimizer.Sitemap.Services
         private readonly IServiceProvider _serviceProvider;
         private readonly IMemoryCache _memoryCache;
         private readonly SitemapGenerator _sitemapGenerator;
-        private readonly SitemapOptions _options;
+        private readonly PageOptimizerConfig _config;
         private readonly ILogger<SitemapService> _logger;
 
         private const string SitemapCacheKey = "SitemapXml";
@@ -30,13 +29,13 @@ namespace Toodle.PageOptimizer.Sitemap.Services
             IServiceProvider serviceProvider,
             IMemoryCache memoryCache,
             SitemapGenerator sitemapGenerator,
-            IOptions<SitemapOptions> options,
+            PageOptimizerConfig config,
             ILogger<SitemapService> logger)
         {
             _serviceProvider = serviceProvider;
             _memoryCache = memoryCache;
             _sitemapGenerator = sitemapGenerator;
-            _options = options.Value;
+            _config = config;
             _logger = logger;
         }
 
@@ -89,11 +88,11 @@ namespace Toodle.PageOptimizer.Sitemap.Services
 
             string sitemapXml = _sitemapGenerator.GenerateSitemap(allUrls.DistinctBy(u => u.Location));
 
-            // Cache the newly generated XML with the configured expiration.
-            _memoryCache.Set(SitemapCacheKey, sitemapXml, _options.CacheDuration);
+            var cacheDuration = _config.SitemapOptions?.CacheDuration ?? TimeSpan.FromHours(4);
+            _memoryCache.Set(SitemapCacheKey, sitemapXml, cacheDuration);
 
             _logger.LogInformation("Sitemap refresh completed. Cached {UrlCount} unique URLs for {Expiration}.",
-                allUrls.DistinctBy(u => u.Location).Count(), _options.CacheDuration);
+                allUrls.DistinctBy(u => u.Location).Count(), cacheDuration);
 
             return sitemapXml;
         }
