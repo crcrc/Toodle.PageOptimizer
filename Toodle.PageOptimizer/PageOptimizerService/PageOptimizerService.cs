@@ -14,8 +14,11 @@ namespace Toodle.PageOptimizer
         /// <summary>Returns the meta description set for the current request.</summary>
         public string GetMetaDescription();
 
-        /// <summary>Returns true if the current page has been marked as noindex.</summary>
+        /// <summary>Returns true if the robots directives include noindex.</summary>
         public bool IsNoIndex();
+
+        /// <summary>Returns the full robots directives string, or null if not set.</summary>
+        public string? GetRobots();
 
         /// <summary>Returns the global site name configured at startup.</summary>
         public string GetSiteName();
@@ -35,14 +38,23 @@ namespace Toodle.PageOptimizer
         /// <summary>Returns the breadcrumb list for the current request, including any global defaults.</summary>
         public IReadOnlyList<(string Title, string Url)> GetBreadCrumbs();
 
-        /// <summary>Returns the og:type value set for the current request, or null if not set.</summary>
-        public string? GetOgType();
+        /// <summary>Returns the OgType object set for the current request, or null if not set.</summary>
+        public OgType? GetOgType();
 
         /// <summary>Returns the Twitter Card type set for the current request, or null if not set.</summary>
         public TwitterCard? GetTwitterCard();
 
         /// <summary>Returns the absolute image URL set for the current request, or null if not set.</summary>
         public string? GetMetaImage();
+
+        /// <summary>Returns the image width in pixels, or null if not set.</summary>
+        public int? GetMetaImageWidth();
+
+        /// <summary>Returns the image height in pixels, or null if not set.</summary>
+        public int? GetMetaImageHeight();
+
+        /// <summary>Returns the image alt text, or null if not set.</summary>
+        public string? GetMetaImageAlt();
 
         /// <summary>
         /// Adds a rel=preconnect hint for the given domain to the HTTP Link header.
@@ -78,9 +90,16 @@ namespace Toodle.PageOptimizer
         public IPageOptimizerService SetMetaDescription(string description);
 
         /// <summary>
-        /// Marks the current page as noindex, rendering a robots meta tag to prevent search engine indexing.
+        /// Shortcut for SetRobots("noindex"). Prevents search engine indexing of the current page.
         /// </summary>
         public IPageOptimizerService SetNoIndex();
+
+        /// <summary>
+        /// Sets the full robots meta tag directives for the current page.
+        /// Accepts any valid robots string (e.g. "noindex, nofollow", "noarchive").
+        /// </summary>
+        /// <param name="directives">A comma-separated string of robots directives.</param>
+        public IPageOptimizerService SetRobots(string directives);
 
         /// <summary>
         /// Sets the canonical URL for the current page. Accepts a relative path (resolved against the base URL) or an absolute URL.
@@ -89,11 +108,11 @@ namespace Toodle.PageOptimizer
         public IPageOptimizerService SetCanonicalUrl(string url);
 
         /// <summary>
-        /// Sets the og:type meta tag for the current page (e.g. "website", "article", "product").
-        /// Not rendered unless explicitly set.
+        /// Sets the og:type for the current page. Use a typed object (OgTypeArticle, OgTypeProduct, etc.)
+        /// to also render type-specific meta tags. Not rendered unless explicitly set.
         /// </summary>
-        /// <param name="ogType">A valid Open Graph type string.</param>
-        public IPageOptimizerService SetOgType(string ogType);
+        /// <param name="ogType">An OgType instance such as OgTypeArticle or OgTypeWebsite.</param>
+        public IPageOptimizerService SetOgType(OgType ogType);
 
         /// <summary>
         /// Sets the twitter:card meta tag for the current page.
@@ -105,10 +124,14 @@ namespace Toodle.PageOptimizer
         /// <summary>
         /// Sets the share image for the current page, overriding the global default.
         /// Accepts a relative path (resolved against the base URL) or an absolute URL.
-        /// Used for both og:image and twitter:image tags.
+        /// Used for og:image and twitter:image tags. Width, height, and alt are optional
+        /// but recommended — social platforms use them to avoid re-fetching the image.
         /// </summary>
         /// <param name="url">A relative path or absolute URL to the image.</param>
-        public IPageOptimizerService SetMetaImage(string url);
+        /// <param name="width">The image width in pixels.</param>
+        /// <param name="height">The image height in pixels.</param>
+        /// <param name="alt">Alt text for the image, used for og:image:alt and twitter:image:alt.</param>
+        public IPageOptimizerService SetMetaImage(string url, int? width = null, int? height = null, string? alt = null);
 
         /// <summary>
         /// Appends a breadcrumb to the end of the breadcrumb list for the current request.
@@ -142,24 +165,31 @@ namespace Toodle.PageOptimizer
         private string _metaTitle = string.Empty;
         private Uri? _canonicalUrl;
         private string _metaDescription = string.Empty;
-        private bool _noIndex = false;
+        private string? _robots;
         private string _locale;
-        private string? _ogType;
+        private OgType? _ogType;
         private TwitterCard? _twitterCard;
         private string? _metaImage;
+        private int? _metaImageWidth;
+        private int? _metaImageHeight;
+        private string? _metaImageAlt;
         private readonly List<(string Title, string Url)> _breadcrumbs = new List<(string Title, string Url)>();
 
         public string GetMetaTitle() => _metaTitle;
         public string GetMetaDescription() => _metaDescription;
-        public bool IsNoIndex() => _noIndex;
+        public bool IsNoIndex() => _robots?.Contains("noindex", StringComparison.OrdinalIgnoreCase) ?? false;
+        public string? GetRobots() => _robots;
         public string GetSiteName() => _siteName;
         public string GetTitleSeparator() => _titleSeparator;
         public string GetLocale() => _locale;
         public Uri? GetCanonicalUrl() => _canonicalUrl;
         public Uri GetBaseUrl() => _baseUrl;
-        public string? GetOgType() => _ogType;
+        public OgType? GetOgType() => _ogType;
         public TwitterCard? GetTwitterCard() => _twitterCard;
         public string? GetMetaImage() => _metaImage;
+        public int? GetMetaImageWidth() => _metaImageWidth;
+        public int? GetMetaImageHeight() => _metaImageHeight;
+        public string? GetMetaImageAlt() => _metaImageAlt;
         public IReadOnlyList<(string Title, string Url)> GetBreadCrumbs() => _breadcrumbs.AsReadOnly();
 
         public PageOptimizerService(PageOptimizerConfig config)
@@ -246,9 +276,14 @@ namespace Toodle.PageOptimizer
             return this;
         }
 
-        public IPageOptimizerService SetNoIndex()
+        public IPageOptimizerService SetNoIndex() => SetRobots("noindex");
+
+        public IPageOptimizerService SetRobots(string directives)
         {
-            _noIndex = true;
+            if (string.IsNullOrWhiteSpace(directives))
+                throw new ArgumentException("Robots directives cannot be empty", nameof(directives));
+
+            _robots = directives;
             return this;
         }
 
@@ -261,16 +296,19 @@ namespace Toodle.PageOptimizer
             return this;
         }
 
-        public IPageOptimizerService SetMetaImage(string url)
+        public IPageOptimizerService SetMetaImage(string url, int? width = null, int? height = null, string? alt = null)
         {
             if (string.IsNullOrWhiteSpace(url))
                 throw new ArgumentException("Image URL cannot be empty", nameof(url));
 
             _metaImage = PageOptimizerApp.ResolveImageUrl(url, _config.BaseUrl);
+            _metaImageWidth = width;
+            _metaImageHeight = height;
+            _metaImageAlt = alt;
             return this;
         }
 
-        public IPageOptimizerService SetOgType(string ogType)
+        public IPageOptimizerService SetOgType(OgType ogType)
         {
             _ogType = ogType;
             return this;

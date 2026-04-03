@@ -6,13 +6,14 @@ A high-performance metadata, breadcrumb, and resource optimization manager for A
 
 See [https://www.pricewatchdog.co.uk](https://www.pricewatchdog.co.uk) and [https://www.competitions-whale.co.uk](https://www.competitions-whale.co.uk) as examples of websites using this library.
 ## Features
-- Fluent SEO API: Easily manage Meta Titles, Descriptions, Canonical URLs, og:type, and Twitter Card types.
+- Fluent SEO API: Easily manage Meta Titles, Descriptions, Canonical URLs, og:type (with typed article/product/profile objects), and Twitter Card types.
 - Social Sharing: Full Open Graph and Twitter Card support including per-page and global default images.
 - HTTP Link Headers: Injects rel=preload and rel=preconnect headers into the HTTP response for faster asset discovery.
 - Static File Caching: Granular control over Cache-Control headers for specific file extensions or paths.
 - HTTPS Compression: One-click setup for Brotli and Gzip.
 - Structured Data: Automatic generation of JSON-LD BreadcrumbList for Google Search results.
 - Flexible Sitemaps: Register dynamic sitemap sources from databases or static lists.
+- robots.txt: Serve a generated robots.txt with optional custom rules. Sitemap URL included automatically.
 - Localization: Integrated support for RequestCulture and og:locale tags.
 
 ## Installation
@@ -66,6 +67,17 @@ app.ConfigurePageOptimizer()
     {
         opt.Path = "/sitemap.xml";
         opt.CacheDuration = TimeSpan.FromHours(4);
+    })
+    .ServeRobotsTxt(opt =>
+    {
+        opt.AdditionalRules = new[]
+        {
+            "Disallow: /admin/",
+            "",
+            "# Block AI scrapers",
+            "User-agent: GPTBot",
+            "Disallow: /"
+        };
     });
 
 app.UsePageOptimizer(); // Enables header injection and SEO middleware
@@ -144,14 +156,22 @@ public class ProductController : Controller
             .SetMetaTitle(product.Name)
             .SetMetaDescription(product.Summary)
             .SetCanonicalUrl($"/products/{product.Slug}") // relative or absolute
-            .SetMetaImage(product.ImageUrl) // overrides the global default; relative or absolute
-            .SetOgType("product")
+            .SetMetaImage(product.ImageUrl, width: 1200, height: 630, alt: product.Name)
+            .SetOgType(new OgTypeProduct
+            {
+                PriceAmount = product.Price,
+                PriceCurrency = "GBP",
+                Availability = "instock"
+            })
             .SetTwitterCard(TwitterCard.SummaryLargeImage)
             .AddBreadCrumb("Products", "/products")
             .AddBreadCrumb(product.Name); // Current page (no URL)
 
         // Prevent indexing for specific conditions
-        if (product.IsDiscontinued) _optimizer.SetNoIndex();
+        if (product.IsDiscontinued) _optimizer.SetNoIndex(); // shortcut for SetRobots("noindex")
+
+        // Or use the full robots string for more control
+        // _optimizer.SetRobots("noindex, nofollow");
 
         return View(product);
     }
@@ -171,8 +191,43 @@ When EnableHttpsCompression is set to true, the library automatically configures
 ### Social Sharing (og:image / twitter:image)
 Set a global default share image in `ConfigurePageOptimizer()` using `WithDefaultImage()`. Individual pages can override it with `SetMetaImage()`. Both methods accept relative paths (resolved against the base URL) or absolute URLs, making it easy to serve images from a CDN on a different domain.
 
-### og:type and Twitter Card
-`SetOgType()` accepts any valid Open Graph type string (`"website"`, `"article"`, `"product"`, etc.). `SetTwitterCard()` accepts a `TwitterCard` enum value (`Summary`, `SummaryLargeImage`, `App`, `Player`). Neither tag is rendered unless explicitly set.
+### Robots Meta Tag
+`SetNoIndex()` is a shortcut for the common case. `SetRobots()` accepts any valid robots directives string for full control:
+
+```csharp
+_optimizer.SetNoIndex();                          // <meta name="robots" content="noindex">
+_optimizer.SetRobots("noindex, nofollow");        // <meta name="robots" content="noindex, nofollow">
+_optimizer.SetRobots("noarchive");               // <meta name="robots" content="noarchive">
+```
+
+The tag is not rendered unless one of these methods is called.
+
+### og:type
+`SetOgType()` accepts a typed object that sets the `og:type` tag and automatically renders the matching type-specific properties:
+
+| Type | og:type | Extra tags rendered |
+|---|---|---|
+| `OgTypeWebsite` | `website` | none |
+| `OgTypeArticle` | `article` | `article:published_time`, `article:modified_time`, `article:author`, `article:section`, `article:tag` |
+| `OgTypeProduct` | `product` | `product:price:amount`, `product:price:currency`, `product:availability` |
+| `OgTypeProfile` | `profile` | `profile:first_name`, `profile:last_name`, `profile:username` |
+
+All properties on each type are optional. Not rendered unless `SetOgType()` is called. Custom types can be created by extending the `OgType` base class and overriding `RenderTags()`.
+
+### Twitter Card
+`SetTwitterCard()` accepts a `TwitterCard` enum value (`Summary`, `SummaryLargeImage`, `App`, `Player`). Not rendered unless explicitly set.
+
+### robots.txt
+`ServeRobotsTxt()` generates and serves a `robots.txt` at `/robots.txt` (configurable). The default output is:
+
+```
+User-agent: *
+Allow: /
+
+Sitemap: https://example.com/sitemap.xml
+```
+
+The `Sitemap:` line is added automatically if `ServeSitemap()` has been called, and omitted if not. Additional rules are appended after the default block using `AdditionalRules` — each string is one line, empty strings produce blank lines for spacing between blocks. This supports any valid robots.txt syntax including comments, multiple `User-agent` blocks, and `Crawl-delay`.
 
 ### Static File Cache Middleware
 The StaticFileCacheHeaderMiddleware intercepts requests for static assets and applies Cache-Control headers based on your FileExtensions and Paths configuration, ensuring high cache hit ratios. Headers are applied just before the response is flushed, so they take precedence over any headers set by UseStaticFiles.

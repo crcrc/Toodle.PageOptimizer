@@ -59,6 +59,11 @@ namespace Toodle.PageOptimizer.Middleware
                 app.UseMiddleware<SitemapMiddleware>();
             }
 
+            if (config.RobotsTxtOptions != null)
+            {
+                app.UseMiddleware<RobotsTxtMiddleware>();
+            }
+
             return app;
         }
     }
