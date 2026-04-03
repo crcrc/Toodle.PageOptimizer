@@ -35,8 +35,8 @@ namespace Toodle.PageOptimizer
         /// <summary>Returns the breadcrumb list for the current request, including any global defaults.</summary>
         public IReadOnlyList<(string Title, string Url)> GetBreadCrumbs();
 
-        /// <summary>Returns the og:type value set for the current request, or null if not set.</summary>
-        public string? GetOgType();
+        /// <summary>Returns the OgType object set for the current request, or null if not set.</summary>
+        public OgType? GetOgType();
 
         /// <summary>Returns the Twitter Card type set for the current request, or null if not set.</summary>
         public TwitterCard? GetTwitterCard();
@@ -98,11 +98,11 @@ namespace Toodle.PageOptimizer
         public IPageOptimizerService SetCanonicalUrl(string url);
 
         /// <summary>
-        /// Sets the og:type meta tag for the current page (e.g. "website", "article", "product").
-        /// Not rendered unless explicitly set.
+        /// Sets the og:type for the current page. Use a typed object (OgTypeArticle, OgTypeProduct, etc.)
+        /// to also render type-specific meta tags. Not rendered unless explicitly set.
         /// </summary>
-        /// <param name="ogType">A valid Open Graph type string.</param>
-        public IPageOptimizerService SetOgType(string ogType);
+        /// <param name="ogType">An OgType instance such as OgTypeArticle or OgTypeWebsite.</param>
+        public IPageOptimizerService SetOgType(OgType ogType);
 
         /// <summary>
         /// Sets the twitter:card meta tag for the current page.
@@ -157,7 +157,7 @@ namespace Toodle.PageOptimizer
         private string _metaDescription = string.Empty;
         private bool _noIndex = false;
         private string _locale;
-        private string? _ogType;
+        private OgType? _ogType;
         private TwitterCard? _twitterCard;
         private string? _metaImage;
         private int? _metaImageWidth;
@@ -173,7 +173,7 @@ namespace Toodle.PageOptimizer
         public string GetLocale() => _locale;
         public Uri? GetCanonicalUrl() => _canonicalUrl;
         public Uri GetBaseUrl() => _baseUrl;
-        public string? GetOgType() => _ogType;
+        public OgType? GetOgType() => _ogType;
         public TwitterCard? GetTwitterCard() => _twitterCard;
         public string? GetMetaImage() => _metaImage;
         public int? GetMetaImageWidth() => _metaImageWidth;
@@ -292,7 +292,7 @@ namespace Toodle.PageOptimizer
             return this;
         }
 
-        public IPageOptimizerService SetOgType(string ogType)
+        public IPageOptimizerService SetOgType(OgType ogType)
         {
             _ogType = ogType;
             return this;

@@ -46,8 +46,11 @@ namespace Toodle.PageOptimizer
             AddImageMetaTags(metaTags);
 
             var ogType = _pageOptimizerService.GetOgType();
-            if (!string.IsNullOrWhiteSpace(ogType))
-                metaTags.Add($"<meta property=\"og:type\" content=\"{HtmlEncoder.Default.Encode(ogType)}\" />");
+            if (ogType != null)
+            {
+                metaTags.Add($"<meta property=\"og:type\" content=\"{ogType.TypeName}\" />");
+                ogType.RenderTags(metaTags);
+            }
 
             var twitterCard = _pageOptimizerService.GetTwitterCard();
             if (twitterCard.HasValue)
