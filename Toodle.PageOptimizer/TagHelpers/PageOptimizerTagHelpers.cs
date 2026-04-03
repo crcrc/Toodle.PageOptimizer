@@ -46,8 +46,11 @@ namespace Toodle.PageOptimizer
             AddImageMetaTags(metaTags);
 
             var ogType = _pageOptimizerService.GetOgType();
-            if (!string.IsNullOrWhiteSpace(ogType))
-                metaTags.Add($"<meta property=\"og:type\" content=\"{HtmlEncoder.Default.Encode(ogType)}\" />");
+            if (ogType != null)
+            {
+                metaTags.Add($"<meta property=\"og:type\" content=\"{ogType.TypeName}\" />");
+                ogType.RenderTags(metaTags);
+            }
 
             var twitterCard = _pageOptimizerService.GetTwitterCard();
             if (twitterCard.HasValue)
@@ -82,6 +85,22 @@ namespace Toodle.PageOptimizer
                 return;
 
             metaTags.Add($"<meta property=\"og:image\" content=\"{HtmlEncoder.Default.Encode(image)}\" />");
+
+            var width = _pageOptimizerService.GetMetaImageWidth();
+            if (width.HasValue)
+                metaTags.Add($"<meta property=\"og:image:width\" content=\"{width.Value}\" />");
+
+            var height = _pageOptimizerService.GetMetaImageHeight();
+            if (height.HasValue)
+                metaTags.Add($"<meta property=\"og:image:height\" content=\"{height.Value}\" />");
+
+            var alt = _pageOptimizerService.GetMetaImageAlt();
+            if (!string.IsNullOrWhiteSpace(alt))
+            {
+                metaTags.Add($"<meta property=\"og:image:alt\" content=\"{HtmlEncoder.Default.Encode(alt)}\" />");
+                metaTags.Add($"<meta name=\"twitter:image:alt\" content=\"{HtmlEncoder.Default.Encode(alt)}\" />");
+            }
+
             metaTags.Add($"<meta name=\"twitter:image\" content=\"{HtmlEncoder.Default.Encode(image)}\" />");
         }
 
@@ -96,10 +115,9 @@ namespace Toodle.PageOptimizer
 
         private void AddRobotsMetaTag(List<string> metaTags)
         {
-            if (_pageOptimizerService.IsNoIndex())
-            {
-                metaTags.Add("<meta name=\"robots\" content=\"noindex\">");
-            }
+            var robots = _pageOptimizerService.GetRobots();
+            if (!string.IsNullOrWhiteSpace(robots))
+                metaTags.Add($"<meta name=\"robots\" content=\"{HtmlEncoder.Default.Encode(robots)}\">");
         }
 
         private void AddCanonicalUrl(List<string> metaTags)

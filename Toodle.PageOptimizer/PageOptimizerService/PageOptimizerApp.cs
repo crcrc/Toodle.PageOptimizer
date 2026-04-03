@@ -67,6 +67,13 @@ namespace Toodle.PageOptimizer
         /// </summary>
         /// <param name="configure">Optional action to configure the sitemap path and cache duration.</param>
         IPageOptimizerApp ServeSitemap(Action<SitemapOptions> configure = null);
+
+        /// <summary>
+        /// Enables robots.txt serving. Requires WithBaseUrl() to have been called first.
+        /// The Sitemap: line is added automatically if ServeSitemap() has also been called.
+        /// </summary>
+        /// <param name="configure">Optional action to configure the path and additional rules.</param>
+        IPageOptimizerApp ServeRobotsTxt(Action<RobotsTxtOptions> configure = null);
     }
 
     public class StaticFileCacheOptions
@@ -81,6 +88,18 @@ namespace Toodle.PageOptimizer
     {
         public TimeSpan CacheDuration { get; set; } = TimeSpan.FromHours(4);
         public string Path { get; set; } = "/sitemap.xml";
+    }
+
+    public class RobotsTxtOptions
+    {
+        /// <summary>The path at which robots.txt is served. Defaults to "/robots.txt".</summary>
+        public string Path { get; set; } = "/robots.txt";
+
+        /// <summary>
+        /// Additional lines appended after the default "User-agent: * / Allow: /" block.
+        /// Each string is one line. Use empty strings for blank lines between blocks.
+        /// </summary>
+        public IEnumerable<string>? AdditionalRules { get; set; }
     }
 
 
@@ -208,6 +227,20 @@ namespace Toodle.PageOptimizer
             return this;
         }
 
+
+        public IPageOptimizerApp ServeRobotsTxt(Action<RobotsTxtOptions> configure = null)
+        {
+            EnsureConfigNotLocked();
+
+            if (string.IsNullOrWhiteSpace(_config.BaseUrl))
+                throw new ArgumentException("WithBaseUrl() must be called before ServeRobotsTxt()", nameof(_config.BaseUrl));
+
+            var options = new RobotsTxtOptions();
+            configure?.Invoke(options);
+
+            _config.SetRobotsTxtOptions(options);
+            return this;
+        }
 
         internal static string ResolveImageUrl(string url, string baseUrl)
         {
