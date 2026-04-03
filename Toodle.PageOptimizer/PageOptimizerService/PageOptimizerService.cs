@@ -44,6 +44,15 @@ namespace Toodle.PageOptimizer
         /// <summary>Returns the absolute image URL set for the current request, or null if not set.</summary>
         public string? GetMetaImage();
 
+        /// <summary>Returns the image width in pixels, or null if not set.</summary>
+        public int? GetMetaImageWidth();
+
+        /// <summary>Returns the image height in pixels, or null if not set.</summary>
+        public int? GetMetaImageHeight();
+
+        /// <summary>Returns the image alt text, or null if not set.</summary>
+        public string? GetMetaImageAlt();
+
         /// <summary>
         /// Adds a rel=preconnect hint for the given domain to the HTTP Link header.
         /// </summary>
@@ -105,10 +114,14 @@ namespace Toodle.PageOptimizer
         /// <summary>
         /// Sets the share image for the current page, overriding the global default.
         /// Accepts a relative path (resolved against the base URL) or an absolute URL.
-        /// Used for both og:image and twitter:image tags.
+        /// Used for og:image and twitter:image tags. Width, height, and alt are optional
+        /// but recommended — social platforms use them to avoid re-fetching the image.
         /// </summary>
         /// <param name="url">A relative path or absolute URL to the image.</param>
-        public IPageOptimizerService SetMetaImage(string url);
+        /// <param name="width">The image width in pixels.</param>
+        /// <param name="height">The image height in pixels.</param>
+        /// <param name="alt">Alt text for the image, used for og:image:alt and twitter:image:alt.</param>
+        public IPageOptimizerService SetMetaImage(string url, int? width = null, int? height = null, string? alt = null);
 
         /// <summary>
         /// Appends a breadcrumb to the end of the breadcrumb list for the current request.
@@ -147,6 +160,9 @@ namespace Toodle.PageOptimizer
         private string? _ogType;
         private TwitterCard? _twitterCard;
         private string? _metaImage;
+        private int? _metaImageWidth;
+        private int? _metaImageHeight;
+        private string? _metaImageAlt;
         private readonly List<(string Title, string Url)> _breadcrumbs = new List<(string Title, string Url)>();
 
         public string GetMetaTitle() => _metaTitle;
@@ -160,6 +176,9 @@ namespace Toodle.PageOptimizer
         public string? GetOgType() => _ogType;
         public TwitterCard? GetTwitterCard() => _twitterCard;
         public string? GetMetaImage() => _metaImage;
+        public int? GetMetaImageWidth() => _metaImageWidth;
+        public int? GetMetaImageHeight() => _metaImageHeight;
+        public string? GetMetaImageAlt() => _metaImageAlt;
         public IReadOnlyList<(string Title, string Url)> GetBreadCrumbs() => _breadcrumbs.AsReadOnly();
 
         public PageOptimizerService(PageOptimizerConfig config)
@@ -261,12 +280,15 @@ namespace Toodle.PageOptimizer
             return this;
         }
 
-        public IPageOptimizerService SetMetaImage(string url)
+        public IPageOptimizerService SetMetaImage(string url, int? width = null, int? height = null, string? alt = null)
         {
             if (string.IsNullOrWhiteSpace(url))
                 throw new ArgumentException("Image URL cannot be empty", nameof(url));
 
             _metaImage = PageOptimizerApp.ResolveImageUrl(url, _config.BaseUrl);
+            _metaImageWidth = width;
+            _metaImageHeight = height;
+            _metaImageAlt = alt;
             return this;
         }
 

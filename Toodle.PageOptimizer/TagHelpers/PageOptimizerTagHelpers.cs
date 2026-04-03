@@ -82,6 +82,22 @@ namespace Toodle.PageOptimizer
                 return;
 
             metaTags.Add($"<meta property=\"og:image\" content=\"{HtmlEncoder.Default.Encode(image)}\" />");
+
+            var width = _pageOptimizerService.GetMetaImageWidth();
+            if (width.HasValue)
+                metaTags.Add($"<meta property=\"og:image:width\" content=\"{width.Value}\" />");
+
+            var height = _pageOptimizerService.GetMetaImageHeight();
+            if (height.HasValue)
+                metaTags.Add($"<meta property=\"og:image:height\" content=\"{height.Value}\" />");
+
+            var alt = _pageOptimizerService.GetMetaImageAlt();
+            if (!string.IsNullOrWhiteSpace(alt))
+            {
+                metaTags.Add($"<meta property=\"og:image:alt\" content=\"{HtmlEncoder.Default.Encode(alt)}\" />");
+                metaTags.Add($"<meta name=\"twitter:image:alt\" content=\"{HtmlEncoder.Default.Encode(alt)}\" />");
+            }
+
             metaTags.Add($"<meta name=\"twitter:image\" content=\"{HtmlEncoder.Default.Encode(image)}\" />");
         }
 
