@@ -13,6 +13,7 @@ See [https://www.pricewatchdog.co.uk](https://www.pricewatchdog.co.uk) and [http
 - HTTPS Compression: One-click setup for Brotli and Gzip.
 - Structured Data: Automatic generation of JSON-LD BreadcrumbList for Google Search results.
 - Flexible Sitemaps: Register dynamic sitemap sources from databases or static lists.
+- robots.txt: Serve a generated robots.txt with optional custom rules. Sitemap URL included automatically.
 - Localization: Integrated support for RequestCulture and og:locale tags.
 
 ## Installation
@@ -66,6 +67,17 @@ app.ConfigurePageOptimizer()
     {
         opt.Path = "/sitemap.xml";
         opt.CacheDuration = TimeSpan.FromHours(4);
+    })
+    .ServeRobotsTxt(opt =>
+    {
+        opt.AdditionalRules = new[]
+        {
+            "Disallow: /admin/",
+            "",
+            "# Block AI scrapers",
+            "User-agent: GPTBot",
+            "Disallow: /"
+        };
     });
 
 app.UsePageOptimizer(); // Enables header injection and SEO middleware
@@ -204,6 +216,18 @@ All properties on each type are optional. Not rendered unless `SetOgType()` is c
 
 ### Twitter Card
 `SetTwitterCard()` accepts a `TwitterCard` enum value (`Summary`, `SummaryLargeImage`, `App`, `Player`). Not rendered unless explicitly set.
+
+### robots.txt
+`ServeRobotsTxt()` generates and serves a `robots.txt` at `/robots.txt` (configurable). The default output is:
+
+```
+User-agent: *
+Allow: /
+
+Sitemap: https://example.com/sitemap.xml
+```
+
+The `Sitemap:` line is added automatically if `ServeSitemap()` has been called, and omitted if not. Additional rules are appended after the default block using `AdditionalRules` — each string is one line, empty strings produce blank lines for spacing between blocks. This supports any valid robots.txt syntax including comments, multiple `User-agent` blocks, and `Crawl-delay`.
 
 ### Static File Cache Middleware
 The StaticFileCacheHeaderMiddleware intercepts requests for static assets and applies Cache-Control headers based on your FileExtensions and Paths configuration, ensuring high cache hit ratios. Headers are applied just before the response is flushed, so they take precedence over any headers set by UseStaticFiles.

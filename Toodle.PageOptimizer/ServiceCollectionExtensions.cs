@@ -152,12 +152,14 @@ namespace Toodle.PageOptimizer
         private readonly List<(string Title, string Url)> _defaultBreadcrumbs = new List<(string Title, string Url)>();
         private StaticFileCacheOptions? _staticFileCacheOptions;
         private SitemapOptions? _sitemapOptions;
+        private RobotsTxtOptions? _robotsTxtOptions;
         private string? _defaultImage;
 
         public bool IsLocked => _isLocked;
         public void Lock() => _isLocked = true;
         public StaticFileCacheOptions? StaticFileCacheOptions => _staticFileCacheOptions;
         public SitemapOptions? SitemapOptions => _sitemapOptions;
+        public RobotsTxtOptions? RobotsTxtOptions => _robotsTxtOptions;
         public string? DefaultImage => _defaultImage;
 
         private void EnsureNotLocked()
@@ -241,6 +243,12 @@ namespace Toodle.PageOptimizer
                 MaxAge = fileCacheOptions?.MaxAge,
                 IsPublic = fileCacheOptions?.IsPublic
             };
+        }
+
+        public void SetRobotsTxtOptions(RobotsTxtOptions options)
+        {
+            EnsureNotLocked();
+            _robotsTxtOptions = options;
         }
 
         public void SetDefaultImage(string imageUrl)
