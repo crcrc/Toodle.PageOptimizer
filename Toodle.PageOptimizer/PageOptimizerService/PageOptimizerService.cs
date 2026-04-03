@@ -14,8 +14,11 @@ namespace Toodle.PageOptimizer
         /// <summary>Returns the meta description set for the current request.</summary>
         public string GetMetaDescription();
 
-        /// <summary>Returns true if the current page has been marked as noindex.</summary>
+        /// <summary>Returns true if the robots directives include noindex.</summary>
         public bool IsNoIndex();
+
+        /// <summary>Returns the full robots directives string, or null if not set.</summary>
+        public string? GetRobots();
 
         /// <summary>Returns the global site name configured at startup.</summary>
         public string GetSiteName();
@@ -87,9 +90,16 @@ namespace Toodle.PageOptimizer
         public IPageOptimizerService SetMetaDescription(string description);
 
         /// <summary>
-        /// Marks the current page as noindex, rendering a robots meta tag to prevent search engine indexing.
+        /// Shortcut for SetRobots("noindex"). Prevents search engine indexing of the current page.
         /// </summary>
         public IPageOptimizerService SetNoIndex();
+
+        /// <summary>
+        /// Sets the full robots meta tag directives for the current page.
+        /// Accepts any valid robots string (e.g. "noindex, nofollow", "noarchive").
+        /// </summary>
+        /// <param name="directives">A comma-separated string of robots directives.</param>
+        public IPageOptimizerService SetRobots(string directives);
 
         /// <summary>
         /// Sets the canonical URL for the current page. Accepts a relative path (resolved against the base URL) or an absolute URL.
@@ -155,7 +165,7 @@ namespace Toodle.PageOptimizer
         private string _metaTitle = string.Empty;
         private Uri? _canonicalUrl;
         private string _metaDescription = string.Empty;
-        private bool _noIndex = false;
+        private string? _robots;
         private string _locale;
         private OgType? _ogType;
         private TwitterCard? _twitterCard;
@@ -167,7 +177,8 @@ namespace Toodle.PageOptimizer
 
         public string GetMetaTitle() => _metaTitle;
         public string GetMetaDescription() => _metaDescription;
-        public bool IsNoIndex() => _noIndex;
+        public bool IsNoIndex() => _robots?.Contains("noindex", StringComparison.OrdinalIgnoreCase) ?? false;
+        public string? GetRobots() => _robots;
         public string GetSiteName() => _siteName;
         public string GetTitleSeparator() => _titleSeparator;
         public string GetLocale() => _locale;
@@ -265,9 +276,14 @@ namespace Toodle.PageOptimizer
             return this;
         }
 
-        public IPageOptimizerService SetNoIndex()
+        public IPageOptimizerService SetNoIndex() => SetRobots("noindex");
+
+        public IPageOptimizerService SetRobots(string directives)
         {
-            _noIndex = true;
+            if (string.IsNullOrWhiteSpace(directives))
+                throw new ArgumentException("Robots directives cannot be empty", nameof(directives));
+
+            _robots = directives;
             return this;
         }
 

@@ -115,10 +115,9 @@ namespace Toodle.PageOptimizer
 
         private void AddRobotsMetaTag(List<string> metaTags)
         {
-            if (_pageOptimizerService.IsNoIndex())
-            {
-                metaTags.Add("<meta name=\"robots\" content=\"noindex\">");
-            }
+            var robots = _pageOptimizerService.GetRobots();
+            if (!string.IsNullOrWhiteSpace(robots))
+                metaTags.Add($"<meta name=\"robots\" content=\"{HtmlEncoder.Default.Encode(robots)}\">");
         }
 
         private void AddCanonicalUrl(List<string> metaTags)

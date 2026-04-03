@@ -156,7 +156,10 @@ public class ProductController : Controller
             .AddBreadCrumb(product.Name); // Current page (no URL)
 
         // Prevent indexing for specific conditions
-        if (product.IsDiscontinued) _optimizer.SetNoIndex();
+        if (product.IsDiscontinued) _optimizer.SetNoIndex(); // shortcut for SetRobots("noindex")
+
+        // Or use the full robots string for more control
+        // _optimizer.SetRobots("noindex, nofollow");
 
         return View(product);
     }
@@ -175,6 +178,17 @@ When EnableHttpsCompression is set to true, the library automatically configures
 
 ### Social Sharing (og:image / twitter:image)
 Set a global default share image in `ConfigurePageOptimizer()` using `WithDefaultImage()`. Individual pages can override it with `SetMetaImage()`. Both methods accept relative paths (resolved against the base URL) or absolute URLs, making it easy to serve images from a CDN on a different domain.
+
+### Robots Meta Tag
+`SetNoIndex()` is a shortcut for the common case. `SetRobots()` accepts any valid robots directives string for full control:
+
+```csharp
+_optimizer.SetNoIndex();                          // <meta name="robots" content="noindex">
+_optimizer.SetRobots("noindex, nofollow");        // <meta name="robots" content="noindex, nofollow">
+_optimizer.SetRobots("noarchive");               // <meta name="robots" content="noarchive">
+```
+
+The tag is not rendered unless one of these methods is called.
 
 ### og:type
 `SetOgType()` accepts a typed object that sets the `og:type` tag and automatically renders the matching type-specific properties:
