@@ -3,6 +3,14 @@
 <!-- markdownlint-disable MD034 -->
 
 <!-- next-release -->
+## 1.5.2
+- Misc Bug fixes
+- 
+## 1.5.1
+- Misc Bug fixes
+
+## 1.5.0
+- Added `AddRssFeed()` to generate an RSS feed at a specified endpoint. Supports custom feed items via `IEnumerable<RssFeedItem>` and auto-generates required XML structure with appropriate headers.
 
 ## 1.4.0
 - Added `SetRobots()` for full robots meta tag control (e.g. `"noindex, nofollow"`, `"noarchive"`). `SetNoIndex()` retained as a shortcut for `SetRobots("noindex")`

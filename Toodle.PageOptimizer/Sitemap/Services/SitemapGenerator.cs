@@ -65,7 +65,7 @@ namespace Toodle.PageOptimizer.Sitemap.Services
                         // It must be formatted in "YYYY-MM-DD" format.
                         if (url.LastModified.HasValue)
                         {
-                            xmlWriter.WriteElementString("lastmod", url.LastModified.Value.ToString("yyyy-MM-dd"));
+                            xmlWriter.WriteElementString("lastmod", url.LastModified.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
                         }
 
                         // Write the optional <changefreq> element if a value is provided.

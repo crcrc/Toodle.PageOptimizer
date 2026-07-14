@@ -1,9 +1,11 @@
 ﻿using Microsoft.AspNetCore.Razor.TagHelpers;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.Unicode;
 using Toodle.PageOptimizer.Models;
 
 namespace Toodle.PageOptimizer
@@ -24,7 +26,7 @@ namespace Toodle.PageOptimizer
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
                 WriteIndented = true,
-                Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+                Encoder = JavaScriptEncoder.Create(UnicodeRanges.All)
             };
         }
 
@@ -123,25 +125,34 @@ namespace Toodle.PageOptimizer
         private void AddCanonicalUrl(List<string> metaTags)
         {
             var canonicalUrl = _pageOptimizerService.GetCanonicalUrl();
-            if (canonicalUrl != null)
-            {
-                metaTags.Add($"<link rel=\"canonical\" href=\"{HtmlEncoder.Default.Encode(canonicalUrl.ToString()).TrimEnd('/')}\" />");
-                metaTags.Add($"<meta property=\"og:url\" content=\"{canonicalUrl.ToString().TrimEnd('/')}\" />");
-            }
+            if (canonicalUrl == null)
+                return;
+
+            var url = canonicalUrl.AbsoluteUri;
+            if (url.Length > canonicalUrl.GetLeftPart(UriPartial.Authority).Length + 1)
+                url = url.TrimEnd('/');   // trim only when there's a real path
+
+            var encoded = HtmlEncoder.Default.Encode(url);
+            metaTags.Add($"<link rel=\"canonical\" href=\"{encoded}\" />");
+            metaTags.Add($"<meta property=\"og:url\" content=\"{encoded}\" />");
         }
 
         private void AddTitleTag(List<string> metaTags)
         {
             var title = _pageOptimizerService.GetMetaTitle();
-            if (!string.IsNullOrWhiteSpace(title))
-            {
-                var siteName = _pageOptimizerService.GetSiteName();
-                var titleSeparator = _pageOptimizerService.GetTitleSeparator();
-                var formattedTitle = $"{HtmlEncoder.Default.Encode(title)} {HtmlEncoder.Default.Encode(titleSeparator)} {HtmlEncoder.Default.Encode(siteName)}";
-                metaTags.Add($"<title>{formattedTitle.Trim()}</title>");
-                metaTags.Add($"<meta property=\"og:title\" content=\"{formattedTitle}\" />");
-                metaTags.Add($"<meta name=\"twitter:title\" content=\"{HtmlEncoder.Default.Encode(title)}\" />");
-            }
+            if (string.IsNullOrWhiteSpace(title))
+                return;
+
+            var siteName = _pageOptimizerService.GetSiteName();
+            var separator = _pageOptimizerService.GetTitleSeparator();
+
+            var formattedTitle = string.IsNullOrWhiteSpace(siteName)
+                ? HtmlEncoder.Default.Encode(title)
+                : $"{HtmlEncoder.Default.Encode(title)} {HtmlEncoder.Default.Encode(separator)} {HtmlEncoder.Default.Encode(siteName)}";
+
+            metaTags.Add($"<title>{formattedTitle}</title>");
+            metaTags.Add($"<meta property=\"og:title\" content=\"{formattedTitle}\" />");
+            metaTags.Add($"<meta name=\"twitter:title\" content=\"{HtmlEncoder.Default.Encode(title)}\" />");
         }
 
         private void AddDescriptionMetaTag(List<string> metaTags)
@@ -166,45 +177,49 @@ namespace Toodle.PageOptimizer
 
         private string GenerateBreadcrumbJsonLd(IReadOnlyList<(string Title, string Url)> breadcrumbs)
         {
-            if (breadcrumbs.Count == 0)
+            var validCrumbs = breadcrumbs
+                .Where(b => !string.IsNullOrWhiteSpace(b.Title))
+                .ToList();
+
+            if (validCrumbs.Count == 0)
                 return string.Empty;
 
             var baseUrl = _pageOptimizerService.GetBaseUrl()?.ToString();
             var itemListElement = new List<object>();
 
-            for (int i = 0; i < breadcrumbs.Count; i++)
+            for (int i = 0; i < validCrumbs.Count; i++)
             {
-                var breadcrumb = breadcrumbs[i];
-
-                if (string.IsNullOrWhiteSpace(breadcrumb.Title))
-                    continue;
+                var breadcrumb = validCrumbs[i];
 
                 var item = new Dictionary<string, object>
-                    {
-                        { "@type", "WebPage" },
-                        { "name", breadcrumb.Title }
-                    };
+                {
+                    { "@type", "WebPage" },
+                    { "name", breadcrumb.Title }
+                };
 
-                var isLastItem = i == breadcrumbs.Count - 1;
+                var isLastItem = i == validCrumbs.Count - 1;
                 if (!isLastItem && !string.IsNullOrEmpty(breadcrumb.Url))
                 {
-                    item.Add("@id", PageOptimizerApp.ResolveImageUrl(breadcrumb.Url, baseUrl));
+                    if (Uri.TryCreate(breadcrumb.Url, UriKind.Absolute, out _))
+                        item.Add("@id", breadcrumb.Url);
+                    else if (!string.IsNullOrWhiteSpace(baseUrl))
+                        item.Add("@id", PageOptimizerApp.ResolveAbsoluteUrl(breadcrumb.Url, baseUrl));
                 }
 
                 itemListElement.Add(new Dictionary<string, object>
-                    {
-                        { "@type", "ListItem" },
-                        { "position", i + 1 },
-                        { "item", item }
-                    });
+                {
+                    { "@type", "ListItem" },
+                    { "position", i + 1 },
+                    { "item", item }
+                });
             }
 
             var jsonLdData = new Dictionary<string, object>
-                {
-                    { "@context", "https://schema.org" },
-                    { "@type", "BreadcrumbList" },
-                    { "itemListElement", itemListElement }
-                };
+            {
+                { "@context", "https://schema.org" },
+                { "@type", "BreadcrumbList" },
+                { "itemListElement", itemListElement }
+            };
 
             return JsonSerializer.Serialize(jsonLdData, _jsonOptions);
         }

@@ -1,19 +1,22 @@
 ﻿using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Localization;
+using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using Microsoft.Net.Http.Headers;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Toodle.PageOptimizer.Models;
-using Microsoft.AspNetCore.ResponseCompression;
-using System.IO.Compression;
-using Microsoft.AspNetCore.Localization;
-using System.Globalization;
-using Microsoft.Net.Http.Headers;
-using Microsoft.Extensions.Options;
-using Toodle.PageOptimizer.Sitemap.Services;
+using Toodle.PageOptimizer.Rss.Models;
+using Toodle.PageOptimizer.Rss.Services;
 using Toodle.PageOptimizer.Sitemap.Models;
+using Toodle.PageOptimizer.Sitemap.Services;
+using static Toodle.PageOptimizer.PageOptimizerConfig;
 
 namespace Toodle.PageOptimizer
 {
@@ -29,26 +32,23 @@ namespace Toodle.PageOptimizer
         /// Registers PageOptimizer services. Call ConfigurePageOptimizer() and UsePageOptimizer() after app.Build() to complete setup.
         /// </summary>
         /// <param name="services">The IServiceCollection.</param>
-        /// <param name="configureOptions">Optional action to enable compression, localization, and sitemap serving.</param>
+        /// <param name="configureOptions">Optional action to enable compression and localization.</param>
         public static IServiceCollection AddPageOptimizer(
             this IServiceCollection services,
             Action<PageOptimizerOptions> configureOptions = null)
         {
-
-            services.AddSingleton<PageOptimizerOptions>();
             services.AddSingleton<PageOptimizerConfig>();
             services.AddScoped<IPageOptimizerService, PageOptimizerService>();
+            services.AddMemoryCache();
+            services.AddSingleton<RssFeedGenerator>();
+            services.AddSingleton<RssFeedService>();
 
             var options = new PageOptimizerOptions();
             configureOptions?.Invoke(options);
             services.AddSingleton(options);
 
-            if (options.ServeSitemap)
-            {
-                services.AddMemoryCache();
-                services.AddSingleton<SitemapGenerator>();
-                services.AddSingleton<SitemapService>();
-            }
+            services.AddSingleton<SitemapGenerator>();
+            services.AddSingleton<SitemapService>();
 
             if (options.EnableHttpsCompression)
             {
@@ -108,6 +108,46 @@ namespace Toodle.PageOptimizer
             where T : class, ISitemapSource
         {
             return services.AddScoped<ISitemapSource, T>();
+        }
+
+        /// <summary>
+        /// Registers an RSS feed to be served at the specified path.
+        /// Multiple feeds can be registered at different paths.
+        /// The feed is cached for the specified duration. Item limiting is the caller's responsibility.
+        /// </summary>
+        /// <param name="services">The IServiceCollection.</param>
+        /// <param name="path">The path at which to serve the feed (e.g. "/feed.xml").</param>
+        /// <param name="title">The RSS channel title.</param>
+        /// <param name="description">The RSS channel description.</param>
+        /// <param name="source">A function that returns the feed items.</param>
+        /// <param name="cacheDuration">How long to cache the generated feed. Defaults to 2 hours.</param>
+        public static IServiceCollection AddRssFeed(
+            this IServiceCollection services,
+            string path,
+            string title,
+            string description,
+            Func<IServiceProvider, Task<IEnumerable<RssItem>>> source,
+            TimeSpan? cacheDuration = null)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+                throw new ArgumentException("Feed path cannot be empty.", nameof(path));
+            if (string.IsNullOrWhiteSpace(title))
+                throw new ArgumentException("Feed title cannot be empty.", nameof(title));
+            if (string.IsNullOrWhiteSpace(description))
+                throw new ArgumentException("Feed description cannot be empty.", nameof(description));
+            if (source == null)
+                throw new ArgumentNullException(nameof(source));
+
+            services.AddSingleton(new RssFeedRegistration
+            {
+                Path = PathValidation.NormalizePath(path, nameof(path)),
+                Title = title,
+                Description = description,
+                CacheDuration = cacheDuration ?? TimeSpan.FromHours(2),
+                Source = source
+            });
+
+            return services;
         }
 
 
@@ -238,7 +278,7 @@ namespace Toodle.PageOptimizer
 
             _staticFileCacheOptions = new StaticFileCacheOptions
             {
-                Paths = fileCacheOptions.Paths?.ToArray(),
+                Paths = fileCacheOptions.Paths?.Select(p => PathValidation.NormalizePath(p, nameof(fileCacheOptions.Paths))).ToArray(),
                 FileExtensions = fileCacheOptions.FileExtensions?.ToArray(),
                 MaxAge = fileCacheOptions?.MaxAge,
                 IsPublic = fileCacheOptions?.IsPublic
@@ -266,6 +306,17 @@ namespace Toodle.PageOptimizer
                 CacheDuration = sitemapOptions.CacheDuration,
                 Path = sitemapOptions.Path
             };
+        }
+
+        internal static class PathValidation
+        {
+            public static string NormalizePath(string path, string paramName)
+            {
+                if (string.IsNullOrWhiteSpace(path))
+                    throw new ArgumentException("Path cannot be empty.", paramName);
+
+                return path.StartsWith('/') ? path : "/" + path;
+            }
         }
     }
 }

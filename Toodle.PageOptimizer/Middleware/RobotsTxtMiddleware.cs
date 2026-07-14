@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using System;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Toodle.PageOptimizer.Middleware
@@ -8,11 +9,14 @@ namespace Toodle.PageOptimizer.Middleware
     public class RobotsTxtMiddleware
     {
         private readonly RequestDelegate _next;
-        private string? _cachedContent;
+        private readonly Lazy<string> _cachedContent;
+        private readonly PageOptimizerConfig _config;
 
-        public RobotsTxtMiddleware(RequestDelegate next)
+        public RobotsTxtMiddleware(RequestDelegate next, PageOptimizerConfig config)
         {
             _next = next;
+            _config = config;
+            _cachedContent = new Lazy<string>(() => GenerateContent(config), LazyThreadSafetyMode.ExecutionAndPublication);
         }
 
         public async Task InvokeAsync(HttpContext context, PageOptimizerConfig config)
@@ -21,9 +25,8 @@ namespace Toodle.PageOptimizer.Middleware
 
             if (!string.IsNullOrWhiteSpace(path) && context.Request.Path.Equals(path, StringComparison.OrdinalIgnoreCase))
             {
-                _cachedContent ??= GenerateContent(config);
                 context.Response.ContentType = "text/plain";
-                await context.Response.WriteAsync(_cachedContent);
+                await context.Response.WriteAsync(_cachedContent.Value);
                 return;
             }
 

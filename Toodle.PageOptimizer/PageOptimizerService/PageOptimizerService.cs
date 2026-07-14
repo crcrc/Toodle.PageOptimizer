@@ -157,8 +157,8 @@ namespace Toodle.PageOptimizer
     {
         private readonly PageOptimizerConfig _config;
 
-        private readonly string _siteName;
-        private readonly string _titleSeparator;
+        private readonly string _siteName = string.Empty;
+        private readonly string _titleSeparator = string.Empty;
         private readonly Uri _baseUrl;
         private readonly List<(string Domain, bool CrossOrigin)> _preconnectDomains = new List<(string Domain, bool CrossOrigin)>();
         private readonly List<(string Url, AssetType AssetType, bool CrossOrigin)> _preloadResources = new List<(string Url, AssetType AssetType, bool CrossOrigin)>();
@@ -166,7 +166,7 @@ namespace Toodle.PageOptimizer
         private Uri? _canonicalUrl;
         private string _metaDescription = string.Empty;
         private string? _robots;
-        private string _locale;
+        private string _locale = string.Empty;
         private OgType? _ogType;
         private TwitterCard? _twitterCard;
         private string? _metaImage;
@@ -183,7 +183,7 @@ namespace Toodle.PageOptimizer
         public string GetTitleSeparator() => _titleSeparator;
         public string GetLocale() => _locale;
         public Uri? GetCanonicalUrl() => _canonicalUrl;
-        public Uri GetBaseUrl() => _baseUrl;
+        public Uri GetBaseUrl() => _baseUrl ?? throw new InvalidOperationException("Base URL has not been configured. Call WithBaseUrl() in ConfigurePageOptimizer().");
         public OgType? GetOgType() => _ogType;
         public TwitterCard? GetTwitterCard() => _twitterCard;
         public string? GetMetaImage() => _metaImage;
@@ -204,6 +204,9 @@ namespace Toodle.PageOptimizer
 
             if (!string.IsNullOrWhiteSpace(_config.BaseUrl))
                 _baseUrl = new Uri(_config.BaseUrl);
+
+            if (!string.IsNullOrWhiteSpace(_config.Locale))
+                _locale = _config.Locale;
 
             if (_config.PreconnectDomains != null)
                 _preconnectDomains.AddRange(_config.PreconnectDomains);
@@ -292,7 +295,7 @@ namespace Toodle.PageOptimizer
             if (url == null)
                 throw new ArgumentNullException(nameof(url));
 
-            _canonicalUrl = new Uri(PageOptimizerApp.ResolveImageUrl(url, _config.BaseUrl));
+            _canonicalUrl = new Uri(PageOptimizerApp.ResolveAbsoluteUrl(url, _config.BaseUrl));
             return this;
         }
 
@@ -301,7 +304,7 @@ namespace Toodle.PageOptimizer
             if (string.IsNullOrWhiteSpace(url))
                 throw new ArgumentException("Image URL cannot be empty", nameof(url));
 
-            _metaImage = PageOptimizerApp.ResolveImageUrl(url, _config.BaseUrl);
+            _metaImage = PageOptimizerApp.ResolveAbsoluteUrl(url, _config.BaseUrl);
             _metaImageWidth = width;
             _metaImageHeight = height;
             _metaImageAlt = alt;

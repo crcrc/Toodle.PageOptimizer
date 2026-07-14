@@ -86,13 +86,24 @@ namespace Toodle.PageOptimizer.Sitemap.Services
                 }
             }
 
-            string sitemapXml = _sitemapGenerator.GenerateSitemap(allUrls.DistinctBy(u => u.Location));
+            // Resolve relative locations against the configured base URL.
+            foreach (var url in allUrls)
+            {
+                if (!string.IsNullOrWhiteSpace(url.Location))
+                    url.Location = PageOptimizerApp.ResolveAbsoluteUrl(url.Location, _config.BaseUrl);
+            }
+
+            var uniqueUrls = allUrls
+                .DistinctBy(u => u.Location, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            string sitemapXml = _sitemapGenerator.GenerateSitemap(uniqueUrls);
 
             var cacheDuration = _config.SitemapOptions?.CacheDuration ?? TimeSpan.FromHours(4);
             _memoryCache.Set(SitemapCacheKey, sitemapXml, cacheDuration);
 
             _logger.LogInformation("Sitemap refresh completed. Cached {UrlCount} unique URLs for {Expiration}.",
-                allUrls.DistinctBy(u => u.Location).Count(), cacheDuration);
+                   uniqueUrls.Count, cacheDuration);
 
             return sitemapXml;
         }

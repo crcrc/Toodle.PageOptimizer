@@ -14,6 +14,7 @@ See [https://www.pricewatchdog.co.uk](https://www.pricewatchdog.co.uk) and [http
 - Structured Data: Automatic generation of JSON-LD BreadcrumbList for Google Search results.
 - Flexible Sitemaps: Register dynamic sitemap sources from databases or static lists.
 - robots.txt: Serve a generated robots.txt with optional custom rules. Sitemap URL included automatically.
+- RSS Feeds: Serve one or more cached RSS 2.0 feeds from dynamic sources such as a database.
 - Localization: Integrated support for RequestCulture and og:locale tags.
 
 ## Installation
@@ -42,7 +43,31 @@ builder.Services.AddPageOptimizer(options =>
         Priority = 0.8m,
         ChangeFrequency = ChangeFrequency.Weekly
     });
-});
+})
+.AddRssFeed(
+    path: "/feed.xml",
+    title: "My Blog",
+    description: "Latest articles from My Blog",
+    cacheDuration: TimeSpan.FromHours(2),
+    source: async sp =>
+    {
+        using var scope = sp.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var articles = await db.Articles
+            .OrderByDescending(a => a.PublishedAt)
+            .Take(20)
+            .ToListAsync();
+
+        return articles.Select(a => new RssItem
+        {
+            Title = a.Title,
+            Link = $"https://www.example.com/articles/{a.Slug}",
+            Description = a.Summary,
+            PublishedDate = a.PublishedAt,
+            Author = a.AuthorEmail,
+            Category = a.Category
+        });
+    });
 ```
 
 ### Middleware & App Configuration
@@ -228,6 +253,13 @@ Sitemap: https://example.com/sitemap.xml
 ```
 
 The `Sitemap:` line is added automatically if `ServeSitemap()` has been called, and omitted if not. Additional rules are appended after the default block using `AdditionalRules` — each string is one line, empty strings produce blank lines for spacing between blocks. This supports any valid robots.txt syntax including comments, multiple `User-agent` blocks, and `Crawl-delay`.
+
+### RSS Feeds
+Register one or more RSS 2.0 feeds via `AddRssFeed()` in `AddPageOptimizer()`. Each feed is served at its configured path and cached for the specified duration. Multiple feeds at different paths are supported — duplicate paths throw at startup.
+
+`RssItem` supports: `Title`, `Link`, `Description`, `PublishedDate`, `Guid` (defaults to `Link`), `Author`, `Category`. All fields except `Title` and `Link` are optional.
+
+Limiting the number of items returned is the caller's responsibility (e.g. `.Take(20)`).
 
 ### Static File Cache Middleware
 The StaticFileCacheHeaderMiddleware intercepts requests for static assets and applies Cache-Control headers based on your FileExtensions and Paths configuration, ensuring high cache hit ratios. Headers are applied just before the response is flushed, so they take precedence over any headers set by UseStaticFiles.

@@ -7,6 +7,8 @@ using System.Text;
 using System.Threading.Tasks;
 using Toodle.PageOptimizer.Models;
 using Toodle.PageOptimizer.Sitemap.Middleware;
+using Toodle.PageOptimizer.Sitemap.Services;
+using static Toodle.PageOptimizer.PageOptimizerConfig;
 
 namespace Toodle.PageOptimizer
 {
@@ -62,18 +64,18 @@ namespace Toodle.PageOptimizer
         IPageOptimizerApp AddStaticFileCacheHeaders(Action<StaticFileCacheOptions> configure = null);
 
         /// <summary>
-        /// Enables sitemap.xml generation and serving. Requires WithBaseUrl() to have been called first.
-        /// Sitemap sources must be registered via AddSitemapSource() in AddPageOptimizer().
-        /// </summary>
-        /// <param name="configure">Optional action to configure the sitemap path and cache duration.</param>
-        IPageOptimizerApp ServeSitemap(Action<SitemapOptions> configure = null);
-
-        /// <summary>
         /// Enables robots.txt serving. Requires WithBaseUrl() to have been called first.
         /// The Sitemap: line is added automatically if ServeSitemap() has also been called.
         /// </summary>
         /// <param name="configure">Optional action to configure the path and additional rules.</param>
         IPageOptimizerApp ServeRobotsTxt(Action<RobotsTxtOptions> configure = null);
+
+        /// <summary>
+        /// Enables sitemap.xml serving. Requires WithBaseUrl() to have been called first,
+        /// and at least one sitemap source registered via AddSitemapSource().
+        /// </summary>
+        /// <param name="configure">Optional action to configure the path and cache duration.</param>
+        IPageOptimizerApp ServeSitemap(Action<SitemapOptions> configure = null);
     }
 
     public class StaticFileCacheOptions
@@ -117,7 +119,7 @@ namespace Toodle.PageOptimizer
 
             if (_options.UseRequestCulture != null)
             {
-                _config.Locale = _options.UseRequestCulture.ToString();
+                _config.Locale = _options.UseRequestCulture.Culture.Name;
             }
         }
 
@@ -208,7 +210,7 @@ namespace Toodle.PageOptimizer
             if (string.IsNullOrWhiteSpace(url))
                 throw new ArgumentException("Image URL cannot be empty", nameof(url));
 
-            _config.SetDefaultImage(ResolveImageUrl(url, _config.BaseUrl));
+            _config.SetDefaultImage(ResolveAbsoluteUrl(url, _config.BaseUrl));
             return this;
         }
 
@@ -219,8 +221,17 @@ namespace Toodle.PageOptimizer
             if (string.IsNullOrWhiteSpace(_config.BaseUrl))
                 throw new ArgumentException("WithBaseUrl() must be called before ServeSitemap() to set the Base Url", nameof(_config.BaseUrl));
 
+            using (var scope = _app.ApplicationServices.CreateScope())
+            {
+                if (!scope.ServiceProvider.GetServices<ISitemapSource>().Any())
+                    throw new InvalidOperationException(
+                        "ServeSitemap() was called but no sitemap sources are registered. " +
+                        "Register at least one via AddSitemapSource() in AddPageOptimizer setup.");
+            }
+
             var options = new SitemapOptions();
             configure?.Invoke(options);
+            options.Path = PathValidation.NormalizePath(options.Path, nameof(options.Path));
 
             _config.AddSitemapOptions(options);
 
@@ -237,12 +248,13 @@ namespace Toodle.PageOptimizer
 
             var options = new RobotsTxtOptions();
             configure?.Invoke(options);
+            options.Path = PathValidation.NormalizePath(options.Path, nameof(options.Path));
 
             _config.SetRobotsTxtOptions(options);
             return this;
         }
 
-        internal static string ResolveImageUrl(string url, string baseUrl)
+        internal static string ResolveAbsoluteUrl(string url, string baseUrl)
         {
             if (Uri.TryCreate(url, UriKind.Absolute, out var absoluteUri) &&
                 (absoluteUri.Scheme == "http" || absoluteUri.Scheme == "https"))

@@ -24,9 +24,15 @@ namespace Toodle.PageOptimizer.Middleware
                 && !context.Request.Headers.ContainsKey("X-Requested-With")
                 && context.Request.Headers.Accept.ToString().Contains("text/html")
                 && !context.Response.HasStarted
-                && !_fileExtensionRegex.IsMatch(context.Request.Path.Value))
+                && !_fileExtensionRegex.IsMatch(context.Request.Path.Value ?? string.Empty))
             {
-                pageOptimizerService.AddLinkHeaders(context);
+                context.Response.OnStarting(() =>
+                {
+                    if (context.Response.StatusCode == 200)
+                        pageOptimizerService.AddLinkHeaders(context);
+
+                    return Task.CompletedTask;
+                });
             }
 
             await _next(context);

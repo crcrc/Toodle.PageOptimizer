@@ -8,6 +8,8 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Toodle.PageOptimizer.Sitemap.Middleware;
+using Toodle.PageOptimizer.Rss.Middleware;
+using Toodle.PageOptimizer.Rss.Services;
 
 namespace Toodle.PageOptimizer.Middleware
 {
@@ -20,8 +22,8 @@ namespace Toodle.PageOptimizer.Middleware
         /// <param name="app">The IApplicationBuilder.</param>
         public static IPageOptimizerApp ConfigurePageOptimizer(this IApplicationBuilder app)
         {
-            var config = app.ApplicationServices.GetService<PageOptimizerConfig>();
-            var options = app.ApplicationServices.GetService<PageOptimizerOptions>();
+            var config = app.ApplicationServices.GetService<PageOptimizerConfig>() ?? throw new InvalidOperationException("PageOptimizer services not found. Call services.AddPageOptimizer() before building the app.");
+            var options = app.ApplicationServices.GetService<PageOptimizerOptions>() ?? throw new InvalidOperationException("PageOptimizer services not found. Call services.AddPageOptimizer() before building the app.");
             return new PageOptimizerApp(app, config, options);
         }
 
@@ -32,8 +34,8 @@ namespace Toodle.PageOptimizer.Middleware
         /// <param name="app">The IApplicationBuilder.</param>
         public static IApplicationBuilder UsePageOptimizer(this IApplicationBuilder app)
         {
-            var config = app.ApplicationServices.GetService<PageOptimizerConfig>();
-            var options = app.ApplicationServices.GetService<PageOptimizerOptions>();
+            var config = app.ApplicationServices.GetService<PageOptimizerConfig>() ?? throw new InvalidOperationException("PageOptimizer services not found. Call services.AddPageOptimizer() before building the app.");
+            var options = app.ApplicationServices.GetService<PageOptimizerOptions>() ?? throw new InvalidOperationException("PageOptimizer services not found. Call services.AddPageOptimizer() before building the app.");
 
             // Ensure config is locked before middleware is used
             config.Lock();
@@ -54,7 +56,7 @@ namespace Toodle.PageOptimizer.Middleware
                 app.UseMiddleware<StaticFileCacheHeaderMiddleware>();
             }
 
-            if (options.ServeSitemap)
+            if (config.SitemapOptions != null)
             {
                 app.UseMiddleware<SitemapMiddleware>();
             }
@@ -62,6 +64,14 @@ namespace Toodle.PageOptimizer.Middleware
             if (config.RobotsTxtOptions != null)
             {
                 app.UseMiddleware<RobotsTxtMiddleware>();
+            }
+
+            var rssFeedRegistrations = app.ApplicationServices.GetServices<RssFeedRegistration>();
+            if (rssFeedRegistrations.Any())
+            {
+                if (string.IsNullOrWhiteSpace(config.BaseUrl))
+                    throw new InvalidOperationException("AddRssFeed() requires WithBaseUrl() to be configured.");
+                app.UseMiddleware<RssFeedMiddleware>();
             }
 
             return app;

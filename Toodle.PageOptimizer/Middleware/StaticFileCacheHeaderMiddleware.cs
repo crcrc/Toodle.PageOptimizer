@@ -3,6 +3,7 @@ using Microsoft.Net.Http.Headers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.NetworkInformation;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -24,8 +25,8 @@ namespace Toodle.PageOptimizer.Middleware
 
         public async Task InvokeAsync(HttpContext context, PageOptimizerConfig config)
         {
-            var path = context.Request.Path.Value;
-            if (string.IsNullOrEmpty(path))
+            var requestPath = context.Request.Path;
+            if (!requestPath.HasValue)
             {
                 await _next(context);
                 return;
@@ -36,13 +37,12 @@ namespace Toodle.PageOptimizer.Middleware
             string[] fileExtensions = config?.StaticFileCacheOptions?.FileExtensions ?? _defaultFileExtensions;
             string[] paths = config?.StaticFileCacheOptions?.Paths ?? Array.Empty<string>();
 
-            path = path.TrimEnd('/');
-
             bool matchesPath = paths.Length == 0 || paths.Any(p =>
-                path.StartsWith(p.TrimEnd('/'), StringComparison.OrdinalIgnoreCase));
+                requestPath.StartsWithSegments(new PathString(p.TrimEnd('/')), StringComparison.OrdinalIgnoreCase, out _));
 
             bool matchesExtension = fileExtensions.Any(ext =>
-                path.EndsWith(ext, StringComparison.OrdinalIgnoreCase));
+                requestPath.Value!.TrimEnd('/').EndsWith(ext, StringComparison.OrdinalIgnoreCase));
+
 
             if (matchesPath && matchesExtension)
             {
@@ -52,8 +52,13 @@ namespace Toodle.PageOptimizer.Middleware
 
                 context.Response.OnStarting(() =>
                 {
-                    if (context.Response.StatusCode == 200)
+                    var status = context.Response.StatusCode;
+                    if (status == StatusCodes.Status200OK
+                        || status == StatusCodes.Status304NotModified
+                        || status == StatusCodes.Status206PartialContent)
+                    {
                         context.Response.Headers[HeaderNames.CacheControl] = cacheControl;
+                    }
                     return Task.CompletedTask;
                 });
             }
