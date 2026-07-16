@@ -3,6 +3,9 @@
 <!-- markdownlint-disable MD034 -->
 
 <!-- next-release -->
+## 1.5.3
+- Fixed `Link` header emission for URLs containing commas (e.g. Cloudinary transformation URLs like `f_auto,q_auto,w_1920`) — `AppendCommaSeparatedValues` wrapped such link-values in double quotes, which is invalid RFC 8288 syntax, so browsers/CDNs dropped the entry. The header value is now joined manually; commas inside `<...>` are unambiguous
+
 ## 1.5.2
 - Misc Bug fixes
 - 

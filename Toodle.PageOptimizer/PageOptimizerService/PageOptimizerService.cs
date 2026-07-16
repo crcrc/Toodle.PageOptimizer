@@ -257,8 +257,13 @@ namespace Toodle.PageOptimizer
                     : $"<{url}>; rel=preload; as={asValue}");
             }
 
+            // Join manually rather than AppendCommaSeparatedValues: that helper wraps any
+            // value containing a comma in double quotes, and URLs with commas (e.g.
+            // Cloudinary transformations like f_auto,q_auto,w_1920) are common. A quoted
+            // link-value is invalid RFC 8288 syntax, so browsers/CDNs drop the entry.
+            // Commas inside <...> are unambiguous — the angle brackets delimit the URI.
             if (linkValues.Count > 0)
-                context.Response.Headers.AppendCommaSeparatedValues("Link", linkValues.ToArray());
+                context.Response.Headers.Append("Link", string.Join(",", linkValues));
         }
 
         public IPageOptimizerService SetMetaTitle(string title)
