@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Toodle.PageOptimizer.Models
+namespace Admirably.PageOptimizer.Models
 {
     /// <summary>Specifies the type of resource for a rel=preload Link header hint.</summary>
     public enum AssetType

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Toodle.PageOptimizer.Sitemap.Models
+namespace Admirably.PageOptimizer.Sitemap.Models
 {
     public class SitemapUrl
     {

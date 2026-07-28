@@ -11,14 +11,14 @@ using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Toodle.PageOptimizer.Models;
-using Toodle.PageOptimizer.Rss.Models;
-using Toodle.PageOptimizer.Rss.Services;
-using Toodle.PageOptimizer.Sitemap.Models;
-using Toodle.PageOptimizer.Sitemap.Services;
-using static Toodle.PageOptimizer.PageOptimizerConfig;
+using Admirably.PageOptimizer.Models;
+using Admirably.PageOptimizer.Rss.Models;
+using Admirably.PageOptimizer.Rss.Services;
+using Admirably.PageOptimizer.Sitemap.Models;
+using Admirably.PageOptimizer.Sitemap.Services;
+using static Admirably.PageOptimizer.PageOptimizerConfig;
 
-namespace Toodle.PageOptimizer
+namespace Admirably.PageOptimizer
 {
     public class PageOptimizerOptions
     {

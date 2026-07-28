@@ -8,7 +8,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace Toodle.PageOptimizer.Middleware
+namespace Admirably.PageOptimizer.Middleware
 {
     public class StaticFileCacheHeaderMiddleware
     {

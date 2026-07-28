@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text.Encodings.Web;
 
-namespace Toodle.PageOptimizer.Models
+namespace Admirably.PageOptimizer.Models
 {
     /// <summary>
     /// Base class for Open Graph type objects. Pass an instance to SetOgType() to set

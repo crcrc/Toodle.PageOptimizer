@@ -1,9 +1,9 @@
 using Microsoft.AspNetCore.Http;
 using System;
 using System.Threading.Tasks;
-using Toodle.PageOptimizer.Rss.Services;
+using Admirably.PageOptimizer.Rss.Services;
 
-namespace Toodle.PageOptimizer.Rss.Middleware
+namespace Admirably.PageOptimizer.Rss.Middleware
 {
     public class RssFeedMiddleware
     {

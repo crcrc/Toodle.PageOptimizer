@@ -4,9 +4,9 @@ using System.Globalization;
 using System.IO;
 using System.Text;
 using System.Xml;
-using Toodle.PageOptimizer.Rss.Models;
+using Admirably.PageOptimizer.Rss.Models;
 
-namespace Toodle.PageOptimizer.Rss.Services
+namespace Admirably.PageOptimizer.Rss.Services
 {
     /// <summary>
     /// Generates RSS 2.0 feed XML from a collection of RssItem objects.

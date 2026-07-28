@@ -1,6 +1,6 @@
 using System;
 
-namespace Toodle.PageOptimizer.Rss.Models
+namespace Admirably.PageOptimizer.Rss.Models
 {
     /// <summary>
     /// Represents a single item in an RSS feed.

@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Toodle.PageOptimizer.Sitemap.Models;
+using Admirably.PageOptimizer.Sitemap.Models;
 
-namespace Toodle.PageOptimizer.Sitemap.Services
+namespace Admirably.PageOptimizer.Sitemap.Services
 {
     public interface ISitemapSource
     {

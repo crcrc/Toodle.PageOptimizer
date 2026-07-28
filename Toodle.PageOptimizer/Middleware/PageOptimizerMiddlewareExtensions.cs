@@ -7,11 +7,11 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Toodle.PageOptimizer.Sitemap.Middleware;
-using Toodle.PageOptimizer.Rss.Middleware;
-using Toodle.PageOptimizer.Rss.Services;
+using Admirably.PageOptimizer.Sitemap.Middleware;
+using Admirably.PageOptimizer.Rss.Middleware;
+using Admirably.PageOptimizer.Rss.Services;
 
-namespace Toodle.PageOptimizer.Middleware
+namespace Admirably.PageOptimizer.Middleware
 {
     public static class PageOptimizerMiddlewareExtensions
     {

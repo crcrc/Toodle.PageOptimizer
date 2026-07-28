@@ -1,4 +1,4 @@
-namespace Toodle.PageOptimizer.Models
+namespace Admirably.PageOptimizer.Models
 {
     /// <summary>Specifies the Twitter Card type for the twitter:card meta tag.</summary>
     public enum TwitterCard

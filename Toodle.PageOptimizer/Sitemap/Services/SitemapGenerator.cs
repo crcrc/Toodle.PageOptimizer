@@ -4,9 +4,9 @@ using System.Globalization;
 using System.IO;
 using System.Text;
 using System.Xml;
-using Toodle.PageOptimizer.Sitemap.Models;
+using Admirably.PageOptimizer.Sitemap.Models;
 
-namespace Toodle.PageOptimizer.Sitemap.Services
+namespace Admirably.PageOptimizer.Sitemap.Services
 {
     public class Utf8StringWriter : StringWriter
     {

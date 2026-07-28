@@ -6,9 +6,9 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Unicode;
-using Toodle.PageOptimizer.Models;
+using Admirably.PageOptimizer.Models;
 
-namespace Toodle.PageOptimizer
+namespace Admirably.PageOptimizer
 {
     /// <summary>
     /// TagHelper for generating meta data tags for a web page.
@@ -22,11 +22,16 @@ namespace Toodle.PageOptimizer
         public PageOptimizerTagHelper(IPageOptimizerService pageOptimizerService)
         {
             _pageOptimizerService = pageOptimizerService;
+            // UnsafeRelaxedJsonEscaping keeps '+' and non-ASCII literal —
+            // JavaScriptEncoder.Create(UnicodeRanges.All) force-escapes HTML-sensitive
+            // ASCII (every '+' came out as a u002B escape) no matter which ranges are allowed. It also
+            // leaves '<' unescaped, so GenerateBreadcrumbJsonLd re-escapes '<' to keep
+            // a "</script>" in breadcrumb data from breaking out of the script block.
             _jsonOptions = new JsonSerializerOptions
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
                 WriteIndented = true,
-                Encoder = JavaScriptEncoder.Create(UnicodeRanges.All)
+                Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
             };
         }
 
@@ -221,7 +226,8 @@ namespace Toodle.PageOptimizer
                 { "itemListElement", itemListElement }
             };
 
-            return JsonSerializer.Serialize(jsonLdData, _jsonOptions);
+            return JsonSerializer.Serialize(jsonLdData, _jsonOptions)
+                .Replace("<", "\\u003C");
         }
     }
 }

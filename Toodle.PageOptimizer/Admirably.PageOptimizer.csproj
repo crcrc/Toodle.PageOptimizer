@@ -4,10 +4,10 @@
 	<LangVersion>11.0</LangVersion>  
 	<ImplicitUsings>disable</ImplicitUsings>  
 	<Nullable>enable</Nullable>  
-	<PackageId>Toodle.PageOptimizer</PackageId>  
+	<PackageId>Admirably.PageOptimizer</PackageId>  
 	<Version>1.5.3</Version>
 	<Authors>Matthew Goldthorpe</Authors>  
-	<Company>Toodle</Company>  
+	<Company>Admirably</Company>  
 	<Description>A website metadata, breadcrumb and resource manager for ASP.NET Core websites, enhancing SEO and site navigation. Uses tag helpers to automatically insert meta tags and JSON-LD to pages</Description>  
 	<PackageLicenseExpression>MIT</PackageLicenseExpression>  
 	<PackageReadmeFile>README.md</PackageReadmeFile>  
@@ -15,9 +15,9 @@
 	<GenerateDocumentationFile>true</GenerateDocumentationFile>  
 	<GeneratePackageOnBuild>True</GeneratePackageOnBuild>  
 	<Title>Page Optimizer</Title>  
-	<PackageProjectUrl>https://www.toodle.uk/opensource</PackageProjectUrl>  
-	<RepositoryUrl>https://github.com/crcrc/Toodle.PageOptimizer</RepositoryUrl>  
-	<PackageReleaseNotes>See https://github.com/crcrc/Toodle.PageOptimizer/blob/main/CHANGELOG.md for details</PackageReleaseNotes>  
+	<PackageProjectUrl>https://www.Admirably.uk/opensource</PackageProjectUrl>  
+	<RepositoryUrl>https://github.com/crcrc/Admirably.PageOptimizer</RepositoryUrl>  
+	<PackageReleaseNotes>See https://github.com/crcrc/Admirably.PageOptimizer/blob/main/CHANGELOG.md for details</PackageReleaseNotes>  
 </PropertyGroup>  
 
 	<ItemGroup>

@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Toodle.PageOptimizer.Rss.Models;
+using Admirably.PageOptimizer.Rss.Models;
 
-namespace Toodle.PageOptimizer.Rss.Services
+namespace Admirably.PageOptimizer.Rss.Services
 {
     /// <summary>
     /// Holds the configuration and source function for a single RSS feed.

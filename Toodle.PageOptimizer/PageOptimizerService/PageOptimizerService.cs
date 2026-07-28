@@ -2,9 +2,10 @@
 using Microsoft.AspNetCore.Mvc.Rendering;
 using System;
 using System.Collections.Generic;
-using Toodle.PageOptimizer.Models;
+using System.Text;
+using Admirably.PageOptimizer.Models;
 
-namespace Toodle.PageOptimizer
+namespace Admirably.PageOptimizer
 {
     public interface IPageOptimizerService
     {
@@ -243,18 +244,20 @@ namespace Toodle.PageOptimizer
             // Add preconnect links
             foreach (var (domain, crossOrigin) in _preconnectDomains)
             {
+                var uri = EncodeLinkUri(domain);
                 linkValues.Add(crossOrigin
-                    ? $"<{domain}>; rel=preconnect; crossorigin"
-                    : $"<{domain}>; rel=preconnect");
+                    ? $"<{uri}>; rel=preconnect; crossorigin"
+                    : $"<{uri}>; rel=preconnect");
             }
 
             // Add preload links
             foreach (var (url, type, crossOrigin) in _preloadResources)
             {
+                var uri = EncodeLinkUri(url);
                 var asValue = type.ToString().ToLowerInvariant();
                 linkValues.Add(crossOrigin
-                    ? $"<{url}>; rel=preload; as={asValue}; crossorigin"
-                    : $"<{url}>; rel=preload; as={asValue}");
+                    ? $"<{uri}>; rel=preload; as={asValue}; crossorigin"
+                    : $"<{uri}>; rel=preload; as={asValue}");
             }
 
             // Join manually rather than AppendCommaSeparatedValues: that helper wraps any
@@ -262,8 +265,33 @@ namespace Toodle.PageOptimizer
             // Cloudinary transformations like f_auto,q_auto,w_1920) are common. A quoted
             // link-value is invalid RFC 8288 syntax, so browsers/CDNs drop the entry.
             // Commas inside <...> are unambiguous — the angle brackets delimit the URI.
-            if (linkValues.Count > 0)
-                context.Response.Headers.Append("Link", string.Join(",", linkValues));
+            // Merge into any existing Link header rather than appending a second
+            // field-line, since some proxies/clients only read the first value.
+            var links = string.Join(",", linkValues);
+            var existing = context.Response.Headers["Link"].ToString();
+            context.Response.Headers["Link"] = string.IsNullOrEmpty(existing)
+                ? links
+                : $"{existing},{links}";
+        }
+
+        // Percent-encodes anything that cannot legally appear inside the <...> of a
+        // Link header: non-ASCII and control characters would make Kestrel reject the
+        // header value, and a raw '>' would terminate the URI-Reference early. '%' is
+        // left as-is so already-percent-encoded URLs pass through unchanged.
+        private static string EncodeLinkUri(string url)
+        {
+            const string allowed = "-._~:/?#[]@!$&'()*+,;=%";
+            var sb = new StringBuilder(url.Length);
+            foreach (var b in Encoding.UTF8.GetBytes(url))
+            {
+                var c = (char)b;
+                if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
+                    || allowed.IndexOf(c) >= 0)
+                    sb.Append(c);
+                else
+                    sb.Append('%').Append(((int)b).ToString("X2"));
+            }
+            return sb.ToString();
         }
 
         public IPageOptimizerService SetMetaTitle(string title)

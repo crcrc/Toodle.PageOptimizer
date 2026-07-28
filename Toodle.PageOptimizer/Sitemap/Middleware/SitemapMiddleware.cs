@@ -4,9 +4,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Toodle.PageOptimizer.Sitemap.Services;
+using Admirably.PageOptimizer.Sitemap.Services;
 
-namespace Toodle.PageOptimizer.Sitemap.Middleware
+namespace Admirably.PageOptimizer.Sitemap.Middleware
 {
     public class SitemapMiddleware
     {

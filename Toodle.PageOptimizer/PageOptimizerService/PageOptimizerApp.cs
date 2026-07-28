@@ -5,12 +5,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Toodle.PageOptimizer.Models;
-using Toodle.PageOptimizer.Sitemap.Middleware;
-using Toodle.PageOptimizer.Sitemap.Services;
-using static Toodle.PageOptimizer.PageOptimizerConfig;
+using Admirably.PageOptimizer.Models;
+using Admirably.PageOptimizer.Sitemap.Middleware;
+using Admirably.PageOptimizer.Sitemap.Services;
+using static Admirably.PageOptimizer.PageOptimizerConfig;
 
-namespace Toodle.PageOptimizer
+namespace Admirably.PageOptimizer
 {
     public interface IPageOptimizerApp
     {

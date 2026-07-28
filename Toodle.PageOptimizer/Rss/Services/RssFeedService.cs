@@ -6,9 +6,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Toodle.PageOptimizer.Rss.Models;
+using Admirably.PageOptimizer.Rss.Models;
 
-namespace Toodle.PageOptimizer.Rss.Services
+namespace Admirably.PageOptimizer.Rss.Services
 {
     public class RssFeedService
     {

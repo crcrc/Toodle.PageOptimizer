@@ -1,9 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.12.35728.132
+# Visual Studio Version 18
+VisualStudioVersion = 18.7.11925.98 stable
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Toodle.PageOptimizer", "Toodle.PageOptimizer\Toodle.PageOptimizer.csproj", "{2D074AA6-10BA-45E6-9C28-F0EEBD00E32D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Admirably.PageOptimizer", "Toodle.PageOptimizer\Admirably.PageOptimizer.csproj", "{2D074AA6-10BA-45E6-9C28-F0EEBD00E32D}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{7C234EBB-BD0A-4516-996B-6365C158A861}"
 	ProjectSection(SolutionItems) = preProject
@@ -24,5 +24,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {F52B6825-E02E-43F3-B8D5-4E31BB154ACF}
 	EndGlobalSection
 EndGlobal

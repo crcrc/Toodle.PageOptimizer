@@ -1,6 +1,6 @@
-﻿# Toodle.PageOptimizer
-![NuGet Version](https://img.shields.io/nuget/v/Toodle.PageOptimizer)
-![NuGet Downloads](https://img.shields.io/nuget/dt/Toodle.PageOptimizer)
+﻿# Admirably.PageOptimizer
+![NuGet Version](https://img.shields.io/nuget/v/Admirably.PageOptimizer)
+![NuGet Downloads](https://img.shields.io/nuget/dt/Admirably.PageOptimizer)
 
 A high-performance metadata, breadcrumb, and resource optimization manager for ASP.NET Core. It streamlines SEO best practices and improves Core Web Vitals (LCP/FCP) by automating resource hinting and header management.
 
@@ -19,7 +19,7 @@ See [https://www.pricewatchdog.co.uk](https://www.pricewatchdog.co.uk) and [http
 
 ## Installation
 ```Bash
-dotnet add package Toodle.PageOptimizer
+dotnet add package Admirably.PageOptimizer
 ```
 
 ### Service Configuration
@@ -112,7 +112,7 @@ app.UsePageOptimizer(); // Enables header injection and SEO middleware
 Add the following to your _ViewImports.cshtml:
 
 ```
-@addTagHelper *, Toodle.PageOptimizer
+@addTagHelper *, Admirably.PageOptimizer
 ```
 
 In Layout (_Layout.cshtml)
@@ -131,7 +131,7 @@ The <page-optimizer /> tag helper handles the title, meta, link rel="canonical",
 Create a partial view (e.g., _Breadcrumbs.cshtml) to render the visual navigation using the injected service.
 
 ```Razor CSHTML
-@inject Toodle.PageOptimizer.IPageOptimizerService pageOptimizerService
+@inject Admirably.PageOptimizer.IPageOptimizerService pageOptimizerService
 @{
     var breadcrumbs = pageOptimizerService.GetBreadCrumbs();
 }
