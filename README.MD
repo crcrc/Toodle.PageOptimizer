@@ -207,6 +207,8 @@ public class ProductController : Controller
 ### Resource Hinting (Link Headers)
 The library automatically appends Link headers to the HTTP response for all preconnect and preload resources defined in configuration. This triggers "Early Hints" in supported browsers and CDNs, allowing assets to begin downloading while the server is still processing the HTML.
 
+Headers are applied just before the response is flushed, so per-request hints added anywhere up to that point are included. A response qualifies if it is a `GET` or `HEAD` request returning 200 with a `text/html` content type — the response's own `Content-Type` is what decides this, so static files, RSS, JSON, and other non-HTML responses are skipped whatever their URL looks like. AJAX requests (with `X-Requested-With`) are also skipped.
+
 ### Response Compression
 When EnableHttpsCompression is set to true, the library automatically configures:
 

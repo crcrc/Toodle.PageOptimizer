@@ -1,5 +1,5 @@
 ﻿using Microsoft.AspNetCore.Http;
-using System.Text.RegularExpressions;
+using System;
 using System.Threading.Tasks;
 
 namespace Admirably.PageOptimizer.Middleware
@@ -13,8 +13,6 @@ namespace Admirably.PageOptimizer.Middleware
             _next = next;
         }
 
-        private static readonly Regex _fileExtensionRegex = new Regex(@"\.(html|htm|css|js|jpg|jpeg|png|gif|ico|pdf|svg|webp|mp3|mp4|webm|zip|rar|txt|xml|json)$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
-
         // Pipeline re-execution (UseExceptionHandler / UseStatusCodePagesWithReExecute)
         // runs this middleware twice on the same HttpContext; without this guard both
         // passes register OnStarting and every link-value is emitted twice.
@@ -22,17 +20,22 @@ namespace Admirably.PageOptimizer.Middleware
 
         public async Task InvokeAsync(HttpContext context, IPageOptimizerService pageOptimizerService)
         {
-            if (context.Request.Method == "GET"
+            // Only the method can be decided up front. Whether the response is HTML is decided
+            // inside the OnStarting callback: gating on the request's Accept header dropped the
+            // header for clients that do not advertise text/html (HEAD probes, fetch(), htmx,
+            // CDNs), while a request-path extension test could not see that a response at an
+            // extensionless route was in fact RSS or JSON. Response.ContentType is populated by
+            // the time the callback runs and answers the question directly.
+            if ((context.Request.Method == "GET" || context.Request.Method == "HEAD")
                 && !context.Request.Headers.ContainsKey("X-Requested-With")
-                && context.Request.Headers.Accept.ToString().Contains("text/html")
                 && !context.Response.HasStarted
-                && !context.Items.ContainsKey(_registeredKey)
-                && !_fileExtensionRegex.IsMatch(context.Request.Path.Value ?? string.Empty))
+                && !context.Items.ContainsKey(_registeredKey))
             {
                 context.Items[_registeredKey] = true;
                 context.Response.OnStarting(() =>
                 {
-                    if (context.Response.StatusCode == 200)
+                    if (context.Response.StatusCode == StatusCodes.Status200OK
+                        && context.Response.ContentType?.StartsWith("text/html", StringComparison.OrdinalIgnoreCase) == true)
                         pageOptimizerService.AddLinkHeaders(context);
 
                     return Task.CompletedTask;

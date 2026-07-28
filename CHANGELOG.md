@@ -3,6 +3,11 @@
 <!-- markdownlint-disable MD034 -->
 
 <!-- next-release -->
+## 1.5.5
+- Fixed RSS `<pubDate>` rendering an invalid date — `GMT` was unquoted in the format string, so `M` was interpreted as the month specifier and July formatted as `09:15:00 G7T`. Feed readers rejected the feed as invalid RFC 822
+- Fixed `PublishedDate` values with `DateTimeKind.Unspecified` being shifted by the server's UTC offset. EF Core returns `Unspecified` even for columns storing UTC, so database-sourced dates were converted as if they were local time. `Unspecified` is now taken to already be UTC; `Local` and `Utc` values are converted as before
+- Fixed `Link` headers not being emitted for requests that do not advertise `text/html` in their `Accept` header (`HEAD` probes, `fetch()` navigations, htmx, CDNs). Eligibility is now decided at response start from the response's `Content-Type` rather than from the request, and `HEAD` requests are included. As a result `Link` headers also no longer leak onto RSS or JSON responses served from extensionless routes
+
 ## 1.5.4
 - Renamed from Toodle.PageOptimizer to Admirably.PageOptimizer
 
