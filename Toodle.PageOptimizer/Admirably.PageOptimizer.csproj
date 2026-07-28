@@ -5,7 +5,7 @@
 	<ImplicitUsings>disable</ImplicitUsings>  
 	<Nullable>enable</Nullable>  
 	<PackageId>Admirably.PageOptimizer</PackageId>  
-	<Version>1.5.3</Version>
+	<Version>1.5.4</Version>
 	<Authors>Matthew Goldthorpe</Authors>  
 	<Company>Admirably</Company>  
 	<Description>A website metadata, breadcrumb and resource manager for ASP.NET Core websites, enhancing SEO and site navigation. Uses tag helpers to automatically insert meta tags and JSON-LD to pages</Description>  
@@ -15,7 +15,7 @@
 	<GenerateDocumentationFile>true</GenerateDocumentationFile>  
 	<GeneratePackageOnBuild>True</GeneratePackageOnBuild>  
 	<Title>Page Optimizer</Title>  
-	<PackageProjectUrl>https://www.Admirably.uk/opensource</PackageProjectUrl>  
+	<PackageProjectUrl>https://www.admirably.co.uk/open-source/page-optimizer</PackageProjectUrl>  
 	<RepositoryUrl>https://github.com/crcrc/Admirably.PageOptimizer</RepositoryUrl>  
 	<PackageReleaseNotes>See https://github.com/crcrc/Admirably.PageOptimizer/blob/main/CHANGELOG.md for details</PackageReleaseNotes>  
 </PropertyGroup>  
