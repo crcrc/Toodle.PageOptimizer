@@ -3,6 +3,9 @@
 <!-- markdownlint-disable MD034 -->
 
 <!-- next-release -->
+## 1.6.0
+- Added `ClearRobots()` to reset the robots directives for the current page, undoing a previous `SetRobots()`/`SetNoIndex()` so that no robots meta tag is rendered. `SetRobots()` rejects an empty string, so there was previously no way back to the unset state. This matters wherever the scoped service outlives a single page — in a Blazor interactive circuit every page shares one instance, so a component calling `SetNoIndex()` conditionally would leave `noindex` set for every page rendered afterwards in that circuit. `ClearBreadcrumbs()` already covered the equivalent case for breadcrumbs
+
 ## 1.5.5
 - Fixed RSS `<pubDate>` rendering an invalid date — `GMT` was unquoted in the format string, so `M` was interpreted as the month specifier and July formatted as `09:15:00 G7T`. Feed readers rejected the feed as invalid RFC 822
 - Fixed `PublishedDate` values with `DateTimeKind.Unspecified` being shifted by the server's UTC offset. EF Core returns `Unspecified` even for columns storing UTC, so database-sourced dates were converted as if they were local time. `Unspecified` is now taken to already be UTC; `Local` and `Utc` values are converted as before

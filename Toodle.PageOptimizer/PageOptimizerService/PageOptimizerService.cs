@@ -103,6 +103,18 @@ namespace Admirably.PageOptimizer
         public IPageOptimizerService SetRobots(string directives);
 
         /// <summary>
+        /// Clears the robots directives for the current page, undoing a previous SetRobots() or
+        /// SetNoIndex() so that no robots meta tag is rendered.
+        /// </summary>
+        /// <remarks>
+        /// SetRobots() rejects an empty string, so this is the only way to return to the unset
+        /// state. Needed where the service instance outlives a single page — notably a Blazor
+        /// interactive circuit, whose scoped instance is shared by every page rendered in it, so a
+        /// component setting noindex conditionally must clear it on the other branch.
+        /// </remarks>
+        public IPageOptimizerService ClearRobots();
+
+        /// <summary>
         /// Sets the canonical URL for the current page. Accepts a relative path (resolved against the base URL) or an absolute URL.
         /// </summary>
         /// <param name="url">A relative path (e.g. "/products/slug") or absolute URL.</param>
@@ -320,6 +332,12 @@ namespace Admirably.PageOptimizer
                 throw new ArgumentException("Robots directives cannot be empty", nameof(directives));
 
             _robots = directives;
+            return this;
+        }
+
+        public IPageOptimizerService ClearRobots()
+        {
+            _robots = null;
             return this;
         }
 

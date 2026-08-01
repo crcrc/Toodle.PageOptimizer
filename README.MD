@@ -5,27 +5,29 @@
 A high-performance metadata, breadcrumb, and resource optimization manager for ASP.NET Core. It streamlines SEO best practices and improves Core Web Vitals (LCP/FCP) by automating resource hinting and header management.
 
 See [https://www.pricewatchdog.co.uk](https://www.pricewatchdog.co.uk) and [https://www.competitions-whale.co.uk](https://www.competitions-whale.co.uk) as examples of websites using this library.
+
 ## Features
 - Fluent SEO API: Easily manage Meta Titles, Descriptions, Canonical URLs, og:type (with typed article/product/profile objects), and Twitter Card types.
 - Social Sharing: Full Open Graph and Twitter Card support including per-page and global default images.
 - HTTP Link Headers: Injects rel=preload and rel=preconnect headers into the HTTP response for faster asset discovery.
-- Static File Caching: Granular control over Cache-Control headers for specific file extensions or paths.
+- Static File Caching: Granular control over Cache-Control headers for specific file extensions or paths, applied to 200, 304, and 206 responses.
 - HTTPS Compression: One-click setup for Brotli and Gzip.
-- Structured Data: Automatic generation of JSON-LD BreadcrumbList for Google Search results.
-- Flexible Sitemaps: Register dynamic sitemap sources from databases or static lists.
+- Structured Data: Automatic generation of JSON-LD BreadcrumbList for Google Search results, safely encoded against script injection.
+- Flexible Sitemaps: Register dynamic sitemap sources from databases or static lists. Relative URLs are resolved against your base URL automatically.
+- RSS Feeds: Serve one or more cached RSS 2.0 feeds from any data source.
 - robots.txt: Serve a generated robots.txt with optional custom rules. Sitemap URL included automatically.
-- RSS Feeds: Serve one or more cached RSS 2.0 feeds from dynamic sources such as a database.
 - Localization: Integrated support for RequestCulture and og:locale tags.
+- Startup safety: Configuration is validated and locked at startup. Paths are normalized (a missing leading `/` is added for you), and misconfiguration fails fast with a clear message instead of at request time.
 
 ## Installation
-```Bash
+```bash
 dotnet add package Admirably.PageOptimizer
 ```
 
-### Service Configuration
-Register the service in Program.cs. This is where you define your compression and sitemap logic.
+## Service Configuration
+Register the services in `Program.cs`. This is where you define compression, localization, sitemap sources, and RSS feeds.
 
-```c#
+```csharp
 builder.Services.AddPageOptimizer(options =>
 {
     options.EnableHttpsCompression = true; // Enables Brotli/Gzip for HTTPS
@@ -33,60 +35,63 @@ builder.Services.AddPageOptimizer(options =>
 })
 .AddSitemapSource(async (serviceProvider) =>
 {
-    // Example: Fetching dynamic product links for the sitemap
+    // Example: fetching dynamic product links for the sitemap
     using var scope = serviceProvider.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     var products = await db.Products.ToListAsync();
 
     return products.Select(p => new SitemapUrl {
-        Location = $"/products/{p.Slug}",
+        Location = $"/products/{p.Slug}", // relative paths are resolved against your base URL
         Priority = 0.8m,
         ChangeFrequency = ChangeFrequency.Weekly
     });
 })
 .AddRssFeed(
     path: "/feed.xml",
-    title: "My Blog",
-    description: "Latest articles from My Blog",
-    cacheDuration: TimeSpan.FromHours(2),
-    source: async sp =>
+    title: "Price Watchdog — Latest Deals",
+    description: "The latest price drops and deals.",
+    source: async (serviceProvider) =>
     {
-        using var scope = sp.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var articles = await db.Articles
-            .OrderByDescending(a => a.PublishedAt)
-            .Take(20)
-            .ToListAsync();
+        var db = serviceProvider.GetRequiredService<ApplicationDbContext>();
+        var posts = await db.Posts.OrderByDescending(p => p.PublishedAt).Take(20).ToListAsync();
 
-        return articles.Select(a => new RssItem
+        return posts.Select(p => new RssItem
         {
-            Title = a.Title,
-            Link = $"https://www.example.com/articles/{a.Slug}",
-            Description = a.Summary,
-            PublishedDate = a.PublishedAt,
-            Author = a.AuthorEmail,
-            Category = a.Category
+            Title = p.Title,
+            Link = $"https://www.pricewatchdog.co.uk/blog/{p.Slug}", // absolute URL
+            Description = p.Summary,
+            PublishedDate = p.PublishedAt
         });
-    });
+    },
+    cacheDuration: TimeSpan.FromHours(1)); // optional, defaults to 2 hours
 ```
 
-### Middleware & App Configuration
-Configure your global site defaults. This locks the global configuration to prevent accidental runtime changes.
+You can also register a class-based sitemap source:
 
-```C#
+```csharp
+builder.Services.AddSitemapSource<MySitemapSource>(); // MySitemapSource : ISitemapSource
+```
+
+Multiple sitemap sources and multiple RSS feeds (at distinct paths) can be registered; sitemap sources are merged and de-duplicated by URL.
+
+## Middleware & App Configuration
+Configure your global site defaults after `app.Build()`. Calling `UsePageOptimizer()` locks the configuration to prevent accidental runtime changes.
+
+```csharp
 app.ConfigurePageOptimizer()
     .WithBaseTitle("Price Watchdog", "|")
     .WithBaseUrl("https://www.pricewatchdog.co.uk")
     .WithDefaultImage("/images/default-share.jpg") // resolved to absolute using base URL
     .AddDefaultPreconnect("https://res.cloudinary.com")
-    // Adds Link: </js/bundle.js>; rel=preload; as=script to every GET response header
-    .AddDefaultPreload("/js/bundle.min.js", AssetType.Script) 
+    // Adds Link: </js/bundle.min.js>; rel=preload; as=script to every HTML response header
+    .AddDefaultPreload("/js/bundle.min.js", AssetType.Script)
     .AddDefaultBreadcrumb("Home", "/")
     .AddStaticFileCacheHeaders(opt =>
     {
         opt.IsPublic = true;
         opt.MaxAge = TimeSpan.FromDays(7);
         opt.FileExtensions = new[] { ".js", ".css", ".ico", ".webp" };
+        // opt.Paths = new[] { "/js", "/css" }; // optional; segment-aware ("/js" won't match "/jsx")
     })
     .ServeSitemap(opt =>
     {
@@ -106,18 +111,26 @@ app.ConfigurePageOptimizer()
     });
 
 app.UsePageOptimizer(); // Enables header injection and SEO middleware
+
+app.UseStaticFiles(); // IMPORTANT: call AFTER UsePageOptimizer() — see note below
 ```
 
-### Rendering Meta Tags & Breadcrumbs
-Add the following to your _ViewImports.cshtml:
+> **Middleware ordering:** `UsePageOptimizer()` must be called **before** `UseStaticFiles()`. Static file cache headers are applied via a response callback, so the PageOptimizer middleware needs to be earlier in the pipeline for static file requests to pass through it. This ordering is also what allows its `Cache-Control` value to take precedence over any header set by `UseStaticFiles`.
+
+Notes:
+- `WithBaseUrl()` is required before `ServeSitemap()`, `ServeRobotsTxt()`, and any RSS feed, and before using relative paths in `WithDefaultImage()`, `SetMetaImage()`, or `SetCanonicalUrl()`.
+- `ServeSitemap()` validates at startup that at least one sitemap source is registered.
+- All configured paths (sitemap, robots.txt, RSS feeds, static cache paths) are normalized — a missing leading `/` is added automatically. Duplicate RSS feed paths throw at startup.
+
+## Rendering Meta Tags & Breadcrumbs
+Add the following to your `_ViewImports.cshtml`:
 
 ```
 @addTagHelper *, Admirably.PageOptimizer
 ```
 
-In Layout (_Layout.cshtml)
-
-The <page-optimizer /> tag helper handles the title, meta, link rel="canonical", and the JSON-LD Breadcrumb script.
+### In your layout (`_Layout.cshtml`)
+The `<page-optimizer />` tag helper renders the title, meta tags, `link rel="canonical"`, and the JSON-LD BreadcrumbList script.
 
 ```html
 <head>
@@ -127,10 +140,9 @@ The <page-optimizer /> tag helper handles the title, meta, link rel="canonical",
 ```
 
 ### UI Breadcrumbs (Partial View)
+Create a partial view (e.g. `_Breadcrumbs.cshtml`) to render the visual navigation using the injected service.
 
-Create a partial view (e.g., _Breadcrumbs.cshtml) to render the visual navigation using the injected service.
-
-```Razor CSHTML
+```cshtml
 @inject Admirably.PageOptimizer.IPageOptimizerService pageOptimizerService
 @{
     var breadcrumbs = pageOptimizerService.GetBreadCrumbs();
@@ -140,9 +152,10 @@ Create a partial view (e.g., _Breadcrumbs.cshtml) to render the visual navigatio
 {
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
-            @foreach (var crumb in breadcrumbs)
+            @for (var i = 0; i < breadcrumbs.Count; i++)
             {
-                var isLast = breadcrumbs.Last() == crumb;
+                var crumb = breadcrumbs[i];
+                var isLast = i == breadcrumbs.Count - 1;
                 <li class="breadcrumb-item @(isLast ? "active" : "")">
                     @if (isLast)
                     {
@@ -159,11 +172,10 @@ Create a partial view (e.g., _Breadcrumbs.cshtml) to render the visual navigatio
 }
 ```
 
-### Controller Usage
+## Controller Usage
 Update page metadata and breadcrumbs dynamically within your actions.
 
-```C#
-
+```csharp
 public class ProductController : Controller
 {
     private readonly IPageOptimizerService _optimizer;
@@ -204,30 +216,35 @@ public class ProductController : Controller
 ```
 
 ## Advanced Mechanics
-### Resource Hinting (Link Headers)
-The library automatically appends Link headers to the HTTP response for all preconnect and preload resources defined in configuration. This triggers "Early Hints" in supported browsers and CDNs, allowing assets to begin downloading while the server is still processing the HTML.
 
-Headers are applied just before the response is flushed, so per-request hints added anywhere up to that point are included. A response qualifies if it is a `GET` or `HEAD` request returning 200 with a `text/html` content type — the response's own `Content-Type` is what decides this, so static files, RSS, JSON, and other non-HTML responses are skipped whatever their URL looks like. AJAX requests (with `X-Requested-With`) are also skipped.
+### Resource Hinting (Link Headers)
+The library appends `Link` headers to successful (200) HTML responses for all preconnect and preload resources defined globally or per request (`AddPreconnect()` / `AddPreload()` on the service). This triggers "Early Hints" in supported browsers and CDNs, allowing assets to begin downloading while the server is still processing the HTML. Headers are applied just before the response is flushed, so per-request hints added anywhere up to that point are included. A response qualifies if it is a `GET` or `HEAD` request returning 200 with a `text/html` content type — the response's own `Content-Type` is what decides this, so static files, RSS, JSON, and other non-HTML responses are skipped whatever their URL looks like. AJAX requests (with `X-Requested-With`) are also skipped.
 
 ### Response Compression
-When EnableHttpsCompression is set to true, the library automatically configures:
-
-- Brotli & Gzip at Optimal compression levels.
-- Support for image/svg+xml and other standard MIME types.
+When `EnableHttpsCompression` is set to `true`, the library automatically configures:
+- Brotli & Gzip at `Optimal` compression levels.
+- Support for `image/svg+xml` in addition to the standard MIME types.
 
 ### Social Sharing (og:image / twitter:image)
-Set a global default share image in `ConfigurePageOptimizer()` using `WithDefaultImage()`. Individual pages can override it with `SetMetaImage()`. Both methods accept relative paths (resolved against the base URL) or absolute URLs, making it easy to serve images from a CDN on a different domain.
+Set a global default share image in `ConfigurePageOptimizer()` using `WithDefaultImage()`. Individual pages can override it with `SetMetaImage()`. Both methods accept relative paths (resolved against the base URL) or absolute URLs, making it easy to serve images from a CDN on a different domain. Optional width, height, and alt parameters render `og:image:width`, `og:image:height`, `og:image:alt`, and `twitter:image:alt`.
 
 ### Robots Meta Tag
 `SetNoIndex()` is a shortcut for the common case. `SetRobots()` accepts any valid robots directives string for full control:
 
 ```csharp
-_optimizer.SetNoIndex();                          // <meta name="robots" content="noindex">
-_optimizer.SetRobots("noindex, nofollow");        // <meta name="robots" content="noindex, nofollow">
-_optimizer.SetRobots("noarchive");               // <meta name="robots" content="noarchive">
+_optimizer.SetNoIndex();                    // <meta name="robots" content="noindex">
+_optimizer.SetRobots("noindex, nofollow");  // <meta name="robots" content="noindex, nofollow">
+_optimizer.SetRobots("noarchive");          // <meta name="robots" content="noarchive">
+_optimizer.ClearRobots();                   // no robots meta tag rendered
 ```
 
-The tag is not rendered unless one of these methods is called.
+The tag is not rendered unless one of these methods is called. `IsNoIndex()` reports whether the current directives include `noindex`.
+
+`SetRobots()` rejects an empty string, so `ClearRobots()` is the way back to the unset state. You need it wherever the scoped service outlives a single page: in a Blazor interactive circuit every page shares one service instance, so a component that sets `noindex` conditionally must clear it on the other branch, or the directive persists onto every page rendered afterwards in that circuit.
+
+```csharp
+if (noIndex) _optimizer.SetNoIndex(); else _optimizer.ClearRobots();
+```
 
 ### og:type
 `SetOgType()` accepts a typed object that sets the `og:type` tag and automatically renders the matching type-specific properties:
@@ -244,6 +261,15 @@ All properties on each type are optional. Not rendered unless `SetOgType()` is c
 ### Twitter Card
 `SetTwitterCard()` accepts a `TwitterCard` enum value (`Summary`, `SummaryLargeImage`, `App`, `Player`). Not rendered unless explicitly set.
 
+### Breadcrumb Structured Data
+The tag helper emits a `BreadcrumbList` JSON-LD script when any breadcrumbs are present. Global defaults added via `AddDefaultBreadcrumb()` are prepended to every request's trail; per-request crumbs are appended with `AddBreadCrumb()`, and `ClearBreadcrumbs()` removes everything including the defaults. Entries with blank titles are skipped while keeping positions consecutive, the final rendered crumb is treated as the current page (no link), relative crumb URLs are resolved against the base URL, and all values are safely encoded so titles containing HTML cannot break out of the script element.
+
+### Sitemap
+`ServeSitemap()` serves a cached sitemap at `/sitemap.xml` (configurable) built from all registered sitemap sources. Relative `Location` values are resolved against the base URL, entries are de-duplicated by URL, `priority` is clamped to the valid 0.0–1.0 range, and the result is cached for the configured duration (default 4 hours). Generation is guarded against cache stampedes, so concurrent first requests trigger only one refresh.
+
+### RSS Feeds
+`AddRssFeed()` registers an RSS 2.0 feed served at the given path. Each feed has its own title, description, item source function, and cache duration (default 2 hours). Item `Link` values should be absolute URLs; items without a title or link are skipped, and `Guid` defaults to the item's link. The channel `<link>` uses your configured base URL, which is why `WithBaseUrl()` is required. Multiple feeds can be registered at distinct paths, each cached and stampede-protected independently. Limiting the number of items is the caller's responsibility.
+
 ### robots.txt
 `ServeRobotsTxt()` generates and serves a `robots.txt` at `/robots.txt` (configurable). The default output is:
 
@@ -254,14 +280,7 @@ Allow: /
 Sitemap: https://example.com/sitemap.xml
 ```
 
-The `Sitemap:` line is added automatically if `ServeSitemap()` has been called, and omitted if not. Additional rules are appended after the default block using `AdditionalRules` — each string is one line, empty strings produce blank lines for spacing between blocks. This supports any valid robots.txt syntax including comments, multiple `User-agent` blocks, and `Crawl-delay`.
-
-### RSS Feeds
-Register one or more RSS 2.0 feeds via `AddRssFeed()` in `AddPageOptimizer()`. Each feed is served at its configured path and cached for the specified duration. Multiple feeds at different paths are supported — duplicate paths throw at startup.
-
-`RssItem` supports: `Title`, `Link`, `Description`, `PublishedDate`, `Guid` (defaults to `Link`), `Author`, `Category`. All fields except `Title` and `Link` are optional.
-
-Limiting the number of items returned is the caller's responsibility (e.g. `.Take(20)`).
+The `Sitemap:` line is added automatically if `ServeSitemap()` has been called, and omitted if not. Additional rules are appended after the default block using `AdditionalRules` — each string is one line, empty strings produce blank lines for spacing between blocks. This supports any valid robots.txt syntax including comments, multiple `User-agent` blocks, and `Crawl-delay`. Content is generated once and cached for the lifetime of the application.
 
 ### Static File Cache Middleware
-The StaticFileCacheHeaderMiddleware intercepts requests for static assets and applies Cache-Control headers based on your FileExtensions and Paths configuration, ensuring high cache hit ratios. Headers are applied just before the response is flushed, so they take precedence over any headers set by UseStaticFiles.
+The `StaticFileCacheHeaderMiddleware` applies `Cache-Control` headers to responses matching your configured `FileExtensions` and optional `Paths`. Path matching is segment-aware (`/js` matches `/js/app.js` but not `/jsx/app.js`) and case-insensitive. Headers are applied to `200 OK`, `304 Not Modified`, and `206 Partial Content` responses — including 304s ensures clients refresh their cache lifetime on revalidation, per RFC 9110. Headers are applied just before the response starts, so they take precedence over any headers set by `UseStaticFiles` (provided `UsePageOptimizer()` is registered first — see the ordering note above). Defaults when not configured: `.js`, `.css`, `.ico` extensions, `public`, 21-day max-age.

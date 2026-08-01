@@ -235,9 +235,16 @@ Set a global default share image in `ConfigurePageOptimizer()` using `WithDefaul
 _optimizer.SetNoIndex();                    // <meta name="robots" content="noindex">
 _optimizer.SetRobots("noindex, nofollow");  // <meta name="robots" content="noindex, nofollow">
 _optimizer.SetRobots("noarchive");          // <meta name="robots" content="noarchive">
+_optimizer.ClearRobots();                   // no robots meta tag rendered
 ```
 
 The tag is not rendered unless one of these methods is called. `IsNoIndex()` reports whether the current directives include `noindex`.
+
+`SetRobots()` rejects an empty string, so `ClearRobots()` is the way back to the unset state. You need it wherever the scoped service outlives a single page: in a Blazor interactive circuit every page shares one service instance, so a component that sets `noindex` conditionally must clear it on the other branch, or the directive persists onto every page rendered afterwards in that circuit.
+
+```csharp
+if (noIndex) _optimizer.SetNoIndex(); else _optimizer.ClearRobots();
+```
 
 ### og:type
 `SetOgType()` accepts a typed object that sets the `og:type` tag and automatically renders the matching type-specific properties:
